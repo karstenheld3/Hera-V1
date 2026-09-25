@@ -60,7 +60,11 @@ export const HarnessLocalSection = z
     read_allowlist: z.array(z.string()).default([]),
     protected_paths: z.array(z.string()).default([...DEFAULT_PROTECTED_PATHS]),
     network_commands: z.array(z.string()).default([...DEFAULT_NETWORK_COMMANDS]),
-    approval: z.enum(["unsafe", "all", "off"]).default("unsafe"),
+    // "all" = every run_command waits for operator approval; "unsafe" = auto-allow only command lines whose
+    // normalized first statement starts with an operator prefix and that touch no network command and stay
+    // inside the workspace; "off" = no approval gate.
+    auto_approve_prefixes: z.array(z.string()).default([]),
+    approval: z.enum(["unsafe", "all", "off"]).default("all"),
   })
   .prefault({});
 

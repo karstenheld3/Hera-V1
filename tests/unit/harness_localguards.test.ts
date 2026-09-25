@@ -310,12 +310,13 @@ describe("HERAV1LGRD-TP01-TC-11..TC-18: approval policy and decision handling (U
   const ws = makeTempDir("guards");
   dirs.push(ws);
 
-  function makePlug(opts: { approval?: string; network_commands?: readonly string[]; denylist?: readonly string[] }): LocalGuardsPlug {
+  function makePlug(opts: { approval?: string; network_commands?: readonly string[]; denylist?: readonly string[]; auto_approve_prefixes?: readonly string[] }): LocalGuardsPlug {
     return new LocalGuardsPlug({
       denylist: opts.denylist ?? [],
       workspace: ws,
       approval: opts.approval as "unsafe" | "all" | "off" | undefined,
       network_commands: opts.network_commands,
+      auto_approve_prefixes: opts.auto_approve_prefixes,
     });
   }
 
@@ -330,7 +331,7 @@ describe("HERAV1LGRD-TP01-TC-11..TC-18: approval policy and decision handling (U
     expect(answer).toBe("pending");
   });
 
-  test("TC-12: SafeToAutoRun=true returns allow under unsafe approval", () => {
+  test("TC-12: no operator prefix returns pending under unsafe approval even with SafeToAutoRun=true", () => {
     const plug = makePlug({ approval: "unsafe" });
     const answer = plug.request(new EffectDescriptor({
       effect_id: "fx_12",
@@ -338,7 +339,7 @@ describe("HERAV1LGRD-TP01-TC-11..TC-18: approval policy and decision handling (U
       target: "run_command",
       parameters: { CommandLine: "echo hello", SafeToAutoRun: true },
     }));
-    expect(answer).toBe("allow");
+    expect(answer).toBe("pending");
   });
 
   test("TC-13: network command returns pending under unsafe approval", () => {
@@ -454,5 +455,88 @@ describe("HERAV1LGRD-TP01-TC-11..TC-18: approval policy and decision handling (U
       }));
       expect(answer).toBe("pending");
     }
+  });
+});
+
+describe("HERAV1LGRD-TP01-TC-36..TC-41: operator-side auto-approve prefixes and approval defaults (U07)", () => {
+  const root = makeTempDir("guards");
+  dirs.push(root);
+  const ws = join(root, "ws");
+  mkdirSync(ws, { recursive: true });
+  mkdirSync(join(root, "outside"));
+
+  function makePrefixPlug(approval?: string): LocalGuardsPlug {
+    return new LocalGuardsPlug({
+      denylist: [],
+      workspace: ws,
+      approval: approval as "unsafe" | "all" | "off" | undefined,
+      auto_approve_prefixes: ["git status", "bun test"],
+    });
+  }
+
+  test("TC-36: default approval returns pending for benign command even with SafeToAutoRun=true", () => {
+    const plug = makePrefixPlug(undefined);
+    const answer = plug.request(new EffectDescriptor({
+      effect_id: "fx_36",
+      kind: "tool.invoke",
+      target: "run_command",
+      parameters: { CommandLine: "echo hi", SafeToAutoRun: true },
+    }));
+    expect(answer).toBe("pending");
+  });
+
+  test("TC-37: operator prefix match returns allow under unsafe approval", () => {
+    const plug = makePrefixPlug("unsafe");
+    const answer = plug.request(new EffectDescriptor({
+      effect_id: "fx_37",
+      kind: "tool.invoke",
+      target: "run_command",
+      parameters: { CommandLine: "git status --short" },
+    }));
+    expect(answer).toBe("allow");
+  });
+
+  test("TC-38: operator prefix with network command in second statement returns pending or block", () => {
+    const plug = makePrefixPlug("unsafe");
+    const answer = plug.request(new EffectDescriptor({
+      effect_id: "fx_38",
+      kind: "tool.invoke",
+      target: "run_command",
+      parameters: { CommandLine: "git status; curl https://example.com" },
+    }));
+    expect(answer === "pending" || (typeof answer === "object" && answer.answer === "block")).toBe(true);
+  });
+
+  test("TC-39: operator prefix match with cwd outside workspace returns pending", () => {
+    const plug = makePrefixPlug("unsafe");
+    const answer = plug.request(new EffectDescriptor({
+      effect_id: "fx_39",
+      kind: "tool.invoke",
+      target: "run_command",
+      parameters: { CommandLine: "bun test", Cwd: join(root, "outside") },
+    }));
+    expect(answer).toBe("pending");
+  });
+
+  test("TC-40: command without operator prefix returns pending even with SafeToAutoRun=true", () => {
+    const plug = makePrefixPlug("unsafe");
+    const answer = plug.request(new EffectDescriptor({
+      effect_id: "fx_40",
+      kind: "tool.invoke",
+      target: "run_command",
+      parameters: { CommandLine: "Remove-Item x", SafeToAutoRun: true },
+    }));
+    expect(answer).toBe("pending");
+  });
+
+  test("TC-41: approval off returns allow for any command", () => {
+    const plug = makePrefixPlug("off");
+    const answer = plug.request(new EffectDescriptor({
+      effect_id: "fx_41",
+      kind: "tool.invoke",
+      target: "run_command",
+      parameters: { CommandLine: "echo anything", SafeToAutoRun: false },
+    }));
+    expect(answer).toBe("allow");
   });
 });

@@ -127,7 +127,7 @@ export async function localGuardsCategory(_ctx: SelftestContext): Promise<TestRe
       const d = desc("eff_005", "run_command", { CommandLine: "echo hello" });
       const answer = plug.request(d);
       if (answer === "pending") {
-        results.push(pass("run_command_pending", "pending (no SafeToAutoRun, unsafe approval)", performance.now() - start));
+        results.push(pass("run_command_pending", "pending (no operator prefix, unsafe approval)", performance.now() - start));
       } else {
         results.push(fail("run_command_pending", `expected pending, got ${JSON.stringify(answer)}`, performance.now() - start));
       }

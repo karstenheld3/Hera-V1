@@ -50,7 +50,7 @@ export function answerHeadless(comm: Communicator, req: PayloadOf<"ask_user">, a
     } else {
       comm.resolvePending(effectId, "deny");
       const firstToken = (req.summary ?? req.tool ?? "").split(/\s+/)[0] ?? "";
-      comm.appendOwnEvent({ ts: nowTs(), proc: "comm", type: "error", severity: "notice", message: `NOTICE: run_command '${firstToken}' denied - headless mode has no approver; use --approve-all or SafeToAutoRun` } as AgentEvent);
+      comm.appendOwnEvent({ ts: nowTs(), proc: "comm", type: "error", severity: "notice", message: `NOTICE: run_command '${firstToken}' denied - headless mode has no approver; use --approve-all or configure harness.local.auto_approve_prefixes` } as AgentEvent);
     }
     return;
   }

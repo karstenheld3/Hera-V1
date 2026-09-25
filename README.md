@@ -265,8 +265,8 @@ AcolClient all four. No plug change inside an admitted run.
 
 Under the `local` profile, every `run_command` that is not denylisted and passes key-shape scan is evaluated by the approval policy (`harness.local.approval`):
 
-- `unsafe` (default): `pending` (requires human approval) when `SafeToAutoRun` is not `true`, when the first token is a network command, or when `Cwd` is outside the workspace; otherwise `allow`.
-- `all`: every `run_command` requires approval.
+- `unsafe`: `pending` (requires human approval) when the command line does not start with a prefix listed in `harness.local.auto_approve_prefixes`, when the first token is a network command, or when `Cwd` is outside the workspace; otherwise `allow`. The gate does not read the model safety hint - only the operator-configured prefix list can auto-allow.
+- `all` (default): every `run_command` requires approval.
 - `off`: every `run_command` that passes the denylist is allowed without approval. Prints `WARNING: approval is off - run_command is not gated` at startup.
 
 In interactive mode the approval widget shows the command line, working directory, and reason; `y` allows, `n` or Escape denies. In pipe mode the console prints `Approve run_command: <summary>? [y/n]` and reads the next input line.
@@ -322,7 +322,7 @@ Delegation to sub-agents is reserved in the contract and not implemented (`agent
 
 Seven deterministic controls in the shipped `local` plug cover the common attack paths against a tool-using agent. Each is a rule, not a model judgement, and `hera selftest 10` verifies all seven offline without a model call:
 
-- **Command approval** - every `run_command` is held for human approval unless the model marked it safe, it is not a network command, and it runs inside the workspace; denylisted and shell-wrapped commands are blocked outright
+- **Command approval** - every `run_command` is held for human approval unless its command line starts with a prefix the operator listed in `harness.local.auto_approve_prefixes`, it is not a network command, and it runs inside the workspace; denylisted and shell-wrapped commands are blocked outright; the model cannot mark its own commands safe
 - **Untrusted-content separation** - tool results, web content, and retrieved memories are delimited and origin-tagged; the system prompt instructs the model that nothing inside these delimiters is an instruction
 - **Credential isolation** - key files and other secret-bearing paths are unreadable by every tool; keys can be restricted to environment variables; tool child processes receive an environment without provider credentials
 - **Egress inspection** - URLs, search queries, and command lines are scanned for secret-shaped content before dispatch and blocked when found

@@ -37,6 +37,7 @@ export interface LocalGuardsConfig {
   read_allowlist?: readonly string[];
   protected_paths?: readonly string[];
   network_commands?: readonly string[];
+  auto_approve_prefixes?: readonly string[];
   approval?: ApprovalMode;
 }
 
@@ -220,11 +221,10 @@ export class LocalGuardsPlug implements GateProvider {
       if (isShellWrapper(commandLine)) return { answer: "block", reason: `blocked by shell wrapper: '${normalizeFirstToken(commandLine)}' with an inline command is opaque to the guards` };
       if (scanKeyShapes(commandLine)) return { answer: "block", reason: "blocked by key shape: command line contains a key-shaped token" };
 
-      // Approval policy (FR-05): pending when conditions met
-      const approval = this.config.approval ?? "unsafe";
+      // Approval policy: the gate does not read model-supplied safety hints.
+      const approval = this.config.approval ?? "all";
       if (approval === "off") return "allow";
 
-      const safeToAutoRun = descriptor.parameters["SafeToAutoRun"] === true;
       const firstToken = normalizeFirstToken(commandLine);
       const networkCommands = this.config.network_commands ?? DEFAULT_NETWORK_COMMANDS;
       const isNetworkCommand = networkCommands.some((cmd) => cmd.toLowerCase() === firstToken);
@@ -233,8 +233,16 @@ export class LocalGuardsPlug implements GateProvider {
       const cwdOutsideWorkspace = cwd !== undefined && !insideWorkspace(resolveRealPath(cwd, this.config.workspace), resolveRealPath(this.config.workspace, this.config.workspace));
 
       if (approval === "all") return "pending";
-      // approval === "unsafe"
-      if (!safeToAutoRun) return "pending";
+      // approval === "unsafe": auto-allow only operator-configured prefixes
+      const prefixes = this.config.auto_approve_prefixes ?? [];
+      const lowered = commandLine.trim().toLowerCase();
+      const operatorApproved = prefixes.some((prefix) => {
+        const folded = prefix.trim().toLowerCase();
+        if (folded.length === 0) return false;
+        if (folded.includes(" ")) return lowered.startsWith(folded);
+        return firstToken === folded;
+      });
+      if (!operatorApproved) return "pending";
       if (isNetworkCommand) return "pending";
       if (cwdOutsideWorkspace) return "pending";
 
