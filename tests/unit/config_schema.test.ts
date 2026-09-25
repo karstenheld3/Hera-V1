@@ -84,7 +84,7 @@ describe("HERAV1PRCF-TP01 schema", () => {
     expect(cfg3.harness.local.read_allowlist).toEqual([]);
   });
 
-  test("HERAV1PRCF-TP01-TC-36 harness defaults: fsync on, profile local; explicit false accepted", () => {
+  test("HERAV1PRCF-TP01-TC-39 harness defaults: fsync on, profile local; explicit false accepted", () => {
     const { config } = parseHeraConfig({ roles: { generating: { model_id: "glm-5.2", effort: "high" } } }, "agent-config.json");
     expect(config.harness.profile).toBe("local");
     expect(config.harness.fsync).toBe(true);
