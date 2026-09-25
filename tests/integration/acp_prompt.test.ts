@@ -193,7 +193,7 @@ describe("[integration] HERAV1ACP-TP01 prompt turns", () => {
     const { response } = await failing.client.request("session/prompt", AcpClient.promptParams(s1, "go"));
     expect(response.error).toBeDefined();
     expect(response.error?.message).toMatch(/provider|rate|error/i);
-    const slow = rig("script_sleep_more.jsonl");
+    const slow = rig("script_sleep_more.jsonl", { configOverrides: { harness: { local: { approval: "off" } } } });
     const s2 = await openSession(slow.client);
     const firstId = slow.client.sendRequest("session/prompt", AcpClient.promptParams(s2, "run it"));
     await slow.client.readUntil((m) => isUpdate(m, "tool_call"));
@@ -208,7 +208,7 @@ describe("[integration] HERAV1ACP-TP01 prompt turns", () => {
 
 describe("[integration] HERAV1ACP-TP01 cancellation, crash, purity", () => {
   test("HERAV1ACP-IP01-TC-25/26 session/cancel during a slow tool → cancel to the Executor, {stopReason: cancelled} without waiting; cancel with no turn is a no-op; $/cancel_request → -32800", async () => {
-    const { client, appDir } = rig("script_sleep_command.jsonl");
+    const { client, appDir } = rig("script_sleep_command.jsonl", { configOverrides: { harness: { local: { approval: "off" } } } });
     const sessionId = await openSession(client);
     client.notify("session/cancel", { sessionId });
     await Bun.sleep(200);
@@ -225,7 +225,7 @@ describe("[integration] HERAV1ACP-TP01 cancellation, crash, purity", () => {
     expect(events.some((e) => e.type === "turn_finished" && (e as { stop_reason: string }).stop_reason === "cancelled")).toBe(true);
     expect(client.stderr()).toContain("no cancellable request with id 4711");
     // $/cancel_request on the active prompt id → -32800 (fresh rig: the sleep script has one tool turn)
-    const other = rig("script_sleep_command.jsonl");
+    const other = rig("script_sleep_command.jsonl", { configOverrides: { harness: { local: { approval: "off" } } } });
     const s2 = await openSession(other.client);
     const second = other.client.sendRequest("session/prompt", AcpClient.promptParams(s2, "again"));
     await other.client.readUntil((m) => isUpdate(m, "tool_call"));
@@ -250,7 +250,7 @@ describe("[integration] HERAV1ACP-TP01 cancellation, crash, purity", () => {
   }, 40000);
 
   test("HERAV1ACP-IP01-TC-28 Executor killed mid-prompt: WARNING chunk, executor resumed chunk, the same pending prompt completes with end_turn", async () => {
-    const { client } = rig("script_sleep_short.jsonl");
+    const { client } = rig("script_sleep_short.jsonl", { configOverrides: { harness: { local: { approval: "off" } } } });
     const sessionId = await openSession(client);
     const status = await client.request("session/prompt", AcpClient.promptParams(sessionId, "/status"));
     const pid = Number(/executor\s+pid='(\d+)'/.exec((AcpClient.updates(status.collected, "agent_message_chunk")[0] as { content: { text: string } }).content.text)?.[1]);

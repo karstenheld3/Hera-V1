@@ -238,7 +238,7 @@ Stated so that a risk assessment can rely on them:
 - **Model access**: OpenAI, Anthropic, and Z.ai APIs over HTTPS are the only supported providers; there is no on-premise model runtime in this version. Data sent to the provider is governed by the organization's contract with that provider
 - **Platform**: Windows x64 is the only shipped target
 - **Not included**: Model Context Protocol (MCP) clients, hooks, a `code_search` subagent, feature flags
-- **Prompt injection**: everything the model reads (workspace files, command output, web pages) is untrusted input. The deterministic guards stop accidental and common injected destructive commands; they are not a defense against an adversary crafting commands to evade first-token matching. Trusted workspaces are the intended operating environment; the `governed` profile exists for environments that need an external policy engine
+- **Prompt injection**: everything the model reads (workspace files, command output, web pages) is untrusted input. The deterministic guards stop accidental and common injected destructive commands; they inspect every statement of a compound command line, but are not a defense against an adversary crafting commands to evade statement-level matching - .NET static calls (`[System.Net.*]`) and other reflective shapes are outside the denylist. Trusted workspaces are the intended operating environment; the `governed` profile exists for environments that need an external policy engine
 
 ## Security
 
@@ -265,7 +265,7 @@ AcolClient all four. No plug change inside an admitted run.
 
 Under the `local` profile, every `run_command` that is not denylisted and passes key-shape scan is evaluated by the approval policy (`harness.local.approval`):
 
-- `unsafe`: `pending` (requires human approval) when the command line does not start with a prefix listed in `harness.local.auto_approve_prefixes`, when the first token is a network command, or when `Cwd` is outside the workspace; otherwise `allow`. The gate does not read the model safety hint - only the operator-configured prefix list can auto-allow.
+- `unsafe`: `pending` (requires human approval) when any statement of the command line does not start with a prefix listed in `harness.local.auto_approve_prefixes`, when any statement starts with a network command, or when `Cwd` is outside the workspace; otherwise `allow`. The gate does not read the model safety hint - only the operator-configured prefix list can auto-allow.
 - `all` (default): every `run_command` requires approval.
 - `off`: every `run_command` that passes the denylist is allowed without approval. Prints `WARNING: approval is off - run_command is not gated` at startup.
 
@@ -322,7 +322,7 @@ Delegation to sub-agents is reserved in the contract and not implemented (`agent
 
 Seven deterministic controls in the shipped `local` plug cover the common attack paths against a tool-using agent. Each is a rule, not a model judgement, and `hera selftest 10` verifies all seven offline without a model call:
 
-- **Command approval** - every `run_command` is held for human approval unless its command line starts with a prefix the operator listed in `harness.local.auto_approve_prefixes`, it is not a network command, and it runs inside the workspace; denylisted and shell-wrapped commands are blocked outright; the model cannot mark its own commands safe
+- **Command approval** - every `run_command` is held for human approval unless every statement of its command line starts with a prefix the operator listed in `harness.local.auto_approve_prefixes`, no statement starts with a network command, and it runs inside the workspace; the denylist, the network-command list, and the shell-wrapper check are applied to every statement of the command line after splitting on shell separators outside quotes - call operators and encoded-command flags count as wrappers - so denylisted and shell-wrapped commands are blocked outright; the model cannot mark its own commands safe
 - **Untrusted-content separation** - tool results, web content, and retrieved memories are delimited and origin-tagged; the system prompt instructs the model that nothing inside these delimiters is an instruction
 - **Credential isolation** - key files and other secret-bearing paths are unreadable by every tool; keys can be restricted to environment variables; tool child processes receive an environment without provider credentials
 - **Egress inspection** - URLs, search queries, and command lines are scanned for secret-shaped content before dispatch and blocked when found
@@ -335,7 +335,7 @@ Seven deterministic controls in the shipped `local` plug cover the common attack
 - Regulatory mappings (EU AI Act, DORA, MaRisk, BaFin Three Lines of Defense, MAS SAFR) are properties of an ACOL deployment on top of Hera's harness, not of Hera alone
 - Encryption of the key file at rest (no platform key store is used; environment variables are the recommended source)
 - Hash-chained, externally anchored audit records - the session log is append-only with one writer; chaining is the ACOL sink adapter's role under `governed`
-- Resistance to an adversary who crafts commands to evade first-token denylist matching (stated in Scope and known limits)
+- Resistance to an adversary who crafts commands to evade statement-level denylist matching; `.NET` static method calls, reflection, and content of already-approved scripts are outside the denylist and are the operator's approval decision (stated in Scope and known limits)
 
 ## Further reading
 

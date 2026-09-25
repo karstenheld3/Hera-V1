@@ -7,7 +7,7 @@ import { mkdirSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_DENYLIST } from "../../src/config/schema.ts";
 import { EffectDescriptor } from "../../src/harness/descriptor.ts";
-import { LocalGuardsPlug, READ_TOOLS, insideWorkspace, isProtected, isShellWrapper, matchDenylist, normalizeFirstToken, resolveRealPath, tokenize } from "../../src/harness/plugs/localguards.ts";
+import { LocalGuardsPlug, READ_TOOLS, insideWorkspace, isProtected, isShellWrapper, matchDenylist, normalizeFirstToken, resolveRealPath, splitStatements, tokenize } from "../../src/harness/plugs/localguards.ts";
 import { KEY_SHAPE_PATTERN, redactKeyShapes, scanKeyShapes } from "../../src/harness/plugs/keyshapes.ts";
 import { makeTempDir, removeDir } from "../harness/procs.ts";
 
@@ -496,7 +496,7 @@ describe("HERAV1LGRD-TP01-TC-36..TC-41: operator-side auto-approve prefixes and 
     expect(answer).toBe("allow");
   });
 
-  test("TC-38: operator prefix with network command in second statement returns pending or block", () => {
+  test("TC-38: operator prefix with network command in second statement returns pending", () => {
     const plug = makePrefixPlug("unsafe");
     const answer = plug.request(new EffectDescriptor({
       effect_id: "fx_38",
@@ -504,7 +504,7 @@ describe("HERAV1LGRD-TP01-TC-36..TC-41: operator-side auto-approve prefixes and 
       target: "run_command",
       parameters: { CommandLine: "git status; curl https://example.com" },
     }));
-    expect(answer === "pending" || (typeof answer === "object" && answer.answer === "block")).toBe(true);
+    expect(answer).toBe("pending");
   });
 
   test("TC-39: operator prefix match with cwd outside workspace returns pending", () => {
@@ -537,6 +537,93 @@ describe("HERAV1LGRD-TP01-TC-36..TC-41: operator-side auto-approve prefixes and 
       target: "run_command",
       parameters: { CommandLine: "echo anything", SafeToAutoRun: false },
     }));
+    expect(answer).toBe("allow");
+  });
+});
+
+describe("HERAV1LGRD-TP01-TC-42: splitStatements tokenizer", () => {
+  const cases: { input: string; expected: string[] }[] = [
+    { input: "echo hi; Remove-Item -Recurse -Force .\\src", expected: ["echo hi", "Remove-Item -Recurse -Force .\\src"] },
+    { input: "a && b || c", expected: ["a", "b", "c"] },
+    { input: "Get-Content a | Invoke-Expression", expected: ["Get-Content a", "Invoke-Expression"] },
+    { input: 'echo "a; b"', expected: ['echo "a; b"'] },
+    { input: "echo 'x | y'", expected: ["echo 'x | y'"] },
+    { input: 'echo `"hi`" ; rm x', expected: ['echo `"hi`"', "rm x"] },
+    { input: "& rm -r x", expected: ["rm -r x"] },
+    { input: ". .\\script.ps1; ls", expected: [".\\script.ps1", "ls"] },
+    { input: "(git status); (ls)", expected: ["git status", "ls"] },
+    { input: "", expected: [] },
+    { input: "echo hi;", expected: ["echo hi"] },
+  ];
+  for (const { input, expected } of cases) {
+    test(`TC-42: splitStatements(${JSON.stringify(input)})`, () => {
+      expect(splitStatements(input)).toEqual(expected);
+    });
+  }
+});
+
+describe("HERAV1LGRD-TP01-TC-43: per-statement denylist, wrapper, and approval checks", () => {
+  const root = makeTempDir("guards");
+  dirs.push(root);
+  const ws = join(root, "ws");
+  mkdirSync(ws, { recursive: true });
+
+  const blockCases: { input: string; reason: string }[] = [
+    { input: "echo hi; Remove-Item -Recurse -Force .\\src", reason: "denylist" },
+    { input: "Get-Content a | Invoke-Expression", reason: "shell wrapper" },
+    { input: "iex 'whatever'", reason: "shell wrapper" },
+    { input: "& del x", reason: "denylist" },
+    { input: "cmd /c del x", reason: "shell wrapper" },
+    { input: "Start-Process pwsh -ArgumentList '-c','ls'", reason: "shell wrapper" },
+    { input: "pwsh -EncodedCommand AAAA", reason: "shell wrapper" },
+  ];
+  for (const { input, reason } of blockCases) {
+    test(`TC-43: block for ${JSON.stringify(input)} (${reason})`, () => {
+      const plug = new LocalGuardsPlug({ denylist: [...DEFAULT_DENYLIST], workspace: ws, approval: "off" });
+      const answer = plug.request(makeDescriptor("run_command", { CommandLine: input }));
+      expect(answer).toEqual({ answer: "block", reason: expect.stringContaining(reason) });
+    });
+  }
+
+  test("TC-43: pending for git status; curl under unsafe with git status prefix", () => {
+    const plug = new LocalGuardsPlug({ denylist: [...DEFAULT_DENYLIST], workspace: ws, approval: "unsafe", auto_approve_prefixes: ["git status"] });
+    const answer = plug.request(makeDescriptor("run_command", { CommandLine: "git status; curl https://example.com" }));
+    expect(answer).toBe("pending");
+  });
+
+  const allowCases: string[] = [
+    'echo "a; b"',
+    "git status && git diff --stat",
+  ];
+  for (const input of allowCases) {
+    test(`TC-43: allow for ${JSON.stringify(input)} under approval off`, () => {
+      const plug = new LocalGuardsPlug({ denylist: [...DEFAULT_DENYLIST], workspace: ws, approval: "off" });
+      const answer = plug.request(makeDescriptor("run_command", { CommandLine: input }));
+      expect(answer).toBe("allow");
+    });
+  }
+
+  test("TC-43: compound denylist match in second statement", () => {
+    const plug = new LocalGuardsPlug({ denylist: [...DEFAULT_DENYLIST], workspace: ws, approval: "off" });
+    const answer = plug.request(makeDescriptor("run_command", { CommandLine: "echo hi; rm -rf build" }));
+    expect(answer).toEqual({ answer: "block", reason: expect.stringContaining("denylist") });
+  });
+
+  test("TC-43: compound wrapper match in second statement", () => {
+    const plug = new LocalGuardsPlug({ denylist: [...DEFAULT_DENYLIST], workspace: ws, approval: "off" });
+    const answer = plug.request(makeDescriptor("run_command", { CommandLine: "echo hi; pwsh -c rm x" }));
+    expect(answer).toEqual({ answer: "block", reason: expect.stringContaining("shell wrapper") });
+  });
+
+  test("TC-43: unsafe approval requires every statement to match a prefix", () => {
+    const plug = new LocalGuardsPlug({ denylist: [...DEFAULT_DENYLIST], workspace: ws, approval: "unsafe", auto_approve_prefixes: ["git status"] });
+    const answer = plug.request(makeDescriptor("run_command", { CommandLine: "git status; echo hi" }));
+    expect(answer).toBe("pending");
+  });
+
+  test("TC-43: unsafe approval allows compound where every statement matches a prefix", () => {
+    const plug = new LocalGuardsPlug({ denylist: [...DEFAULT_DENYLIST], workspace: ws, approval: "unsafe", auto_approve_prefixes: ["git status", "git diff"] });
+    const answer = plug.request(makeDescriptor("run_command", { CommandLine: "git status; git diff --stat" }));
     expect(answer).toBe("allow");
   });
 });

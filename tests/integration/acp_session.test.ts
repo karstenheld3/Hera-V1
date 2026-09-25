@@ -143,7 +143,7 @@ describe("[integration] HERAV1ACP-TP01 handshake and sessions (fake client over 
   }, 60000);
 
   test("HERAV1ACP-IP01-TC-17 session/new while a turn is active → error naming the active session", async () => {
-    const { client, workspace } = acpRig("script_sleep_short.jsonl");
+    const { client, workspace } = acpRig("script_sleep_short.jsonl", { configOverrides: { harness: { local: { approval: "off" } } } });
     await retryHandshake(client);
     const { sessionId } = await client.sessionNew();
     await client.readMessage();

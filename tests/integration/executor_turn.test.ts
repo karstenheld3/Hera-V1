@@ -95,7 +95,7 @@ describe("[integration] HERAV1EXEC-TP01 turn loop (real Executor, scripted adapt
   }, 30000);
 
   test("HERAV1EXEC-TP01-TC-09/10 cancel during a tool: child killed, ToolCall cancelled, turn_finished cancelled with the note", async () => {
-    const r = await rig("script_sleep_command.jsonl");
+    const r = await rig("script_sleep_command.jsonl", { configOverrides: { harness: { local: { approval: "off" } } } });
     r.prompt("run it");
     await r.waitForEvent("tool_call_requested");
     const beat = await r.comm.waitFor((m) => m.type === "heartbeat" && ((m.payload as { children?: number[] }).children ?? []).length === 1, 10000, "child in heartbeat");
@@ -119,7 +119,7 @@ describe("[integration] HERAV1EXEC-TP01 turn loop (real Executor, scripted adapt
   }, 30000);
 
   test("HERAV1EXEC-TP01-TC-11 resume {tool_hang} during a tool: tool terminated, ToolCall error, executor_resumed, loop continues", async () => {
-    const r = await rig("script_sleep_command.jsonl");
+    const r = await rig("script_sleep_command.jsonl", { configOverrides: { harness: { local: { approval: "off" } } } });
     r.prompt("run it");
     await r.waitForEvent("tool_call_requested");
     await r.comm.waitFor((m) => m.type === "heartbeat" && ((m.payload as { children?: number[] }).children ?? []).length === 1, 10000, "child in heartbeat");

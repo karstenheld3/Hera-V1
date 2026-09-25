@@ -201,7 +201,7 @@ describe("[blackbox] U08 CLI approval widget", () => {
     // TC-34: headless without --approve-all → deny with NOTICE
     answerHeadless(mockComm, { kind: "pending", request_id: "pending_fx_1", effect_id: "fx_1", tool: "run_command", summary: "echo hello", reason: "SafeToAutoRun is false" }, false, false);
     expect(calls).toContain("fx_1:deny");
-    expect(events.some((e) => e.type === "error" && (e as { message: string }).message.includes("NOTICE: run_command 'echo' denied - headless mode has no approver; use --approve-all or SafeToAutoRun"))).toBe(true);
+    expect(events.some((e) => e.type === "error" && (e as { message: string }).message.includes("NOTICE: run_command 'echo' denied - headless mode has no approver; use --approve-all or configure harness.local.auto_approve_prefixes"))).toBe(true);
     // TC-35: headless with --approve-all → allow
     calls.length = 0;
     events.length = 0;

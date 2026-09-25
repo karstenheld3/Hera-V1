@@ -104,7 +104,7 @@ describe("[integration] HERAV1PROC-TP01 Phase 4 - Communicator + real Executor +
   }, 40000);
 
   test("Executor killed mid-turn: Communicator stays responsive to /status and resumes the session from the JSONL", async () => {
-    const { comm, rec } = await threeProcesses("script_sleep_short.jsonl");
+    const { comm, rec } = await threeProcesses("script_sleep_short.jsonl", { harness: { local: { approval: "off" } } });
     comm.submitPrompt("run it");
     await waitFor(() => rec.events.some((e) => e.type === "tool_call_requested"), 20000, "tool requested");
     const pid = comm.status().children[0]?.pid as number;

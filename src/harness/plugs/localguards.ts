@@ -8,8 +8,8 @@ import type { EffectDescriptor } from "../descriptor.ts";
 import type { AdmitResult, GateAnswer, GateProvider } from "../provider.ts";
 import { scanKeyShapes } from "./keyshapes.ts";
 
-export const SHELL_WRAPPERS: readonly string[] = ["pwsh", "powershell", "cmd", "bash"];
-export const WRAPPER_EXECUTION_FLAGS: readonly string[] = ["-command", "-c", "/c"];
+export const SHELL_WRAPPERS: readonly string[] = ["pwsh", "powershell", "cmd", "bash", "iex", "invoke-expression", "invoke-command", "start-process"];
+export const WRAPPER_EXECUTION_FLAGS: readonly string[] = ["-command", "-c", "/c", "-encodedcommand", "-enc", "-e"];
 export const WRITE_TOOLS: ReadonlySet<string> = new Set(["edit", "multi_edit", "write_to_file"]);
 export const READ_TOOLS: ReadonlySet<string> = new Set(["read_file", "list_dir", "search"]);
 
@@ -88,24 +88,68 @@ export function normalizeFirstToken(commandLine: string): string {
   return token.toLowerCase();
 }
 
-/** Single-token entries match the first token; multi-token entries prefix-match the command line (case-insensitive). */
+/** Denylist entries match any statement: single-word entries against each statement's normalized first token, multi-word entries as a prefix of each trimmed lowercased statement. */
 export function matchDenylist(commandLine: string, entries: readonly string[]): string | undefined {
-  const token = normalizeFirstToken(commandLine);
-  const lowered = commandLine.trim().toLowerCase();
-  for (const entry of entries) {
-    const folded = entry.trim().toLowerCase();
-    if (folded.length === 0) continue;
-    if (folded.includes(" ")) {
-      if (lowered.startsWith(folded)) return entry;
-    } else if (token === folded) return entry;
+  const statements = splitStatements(commandLine);
+  for (const stmt of statements) {
+    const token = normalizeFirstToken(stmt);
+    const lowered = stmt.trim().toLowerCase();
+    for (const entry of entries) {
+      const folded = entry.trim().toLowerCase();
+      if (folded.length === 0) continue;
+      if (folded.includes(" ")) {
+        if (lowered.startsWith(folded)) return entry;
+      } else if (token === folded) return entry;
+    }
   }
   return undefined;
 }
 
+/** Returns true if any statement's first token is a shell wrapper with an execution flag, or a dynamic-execution wrapper. */
 export function isShellWrapper(commandLine: string): boolean {
-  if (!SHELL_WRAPPERS.includes(normalizeFirstToken(commandLine))) return false;
-  const lowered = ` ${commandLine.toLowerCase().trim()} `;
-  return WRAPPER_EXECUTION_FLAGS.some((flag) => lowered.includes(` ${flag} `) || lowered.endsWith(` ${flag} `));
+  const statements = splitStatements(commandLine);
+  for (const stmt of statements) {
+    const token = normalizeFirstToken(stmt);
+    if (!SHELL_WRAPPERS.includes(token)) continue;
+    const lowered = ` ${stmt.toLowerCase().trim()} `;
+    if (WRAPPER_EXECUTION_FLAGS.some((flag) => lowered.includes(` ${flag} `) || lowered.endsWith(` ${flag} `))) return true;
+    if (token === "iex" || token === "invoke-expression" || token === "invoke-command" || token === "start-process") return true;
+  }
+  return false;
+}
+
+/** Split a command line into individual statements on `;`, `&&`, `||`, `|`, and newline, respecting quotes and backtick escapes. */
+export function splitStatements(commandLine: string): string[] {
+  const pieces: string[] = [];
+  let current = "";
+  let inSingle = false;
+  let inDouble = false;
+  let escaped = false;
+  for (let i = 0; i < commandLine.length; i++) {
+    const ch = commandLine[i];
+    if (escaped) { current += ch; escaped = false; continue; }
+    if (ch === "`" && !inSingle) { current += ch; escaped = true; continue; }
+    if (inSingle) { current += ch; if (ch === "'") inSingle = false; continue; }
+    if (inDouble) { current += ch; if (ch === '"') inDouble = false; continue; }
+    if (ch === "'") { inSingle = true; current += ch; continue; }
+    if (ch === '"') { inDouble = true; current += ch; continue; }
+    if (ch === "&" && commandLine[i + 1] === "&") { pieces.push(current); current = ""; i++; continue; }
+    if (ch === "|" && commandLine[i + 1] === "|") { pieces.push(current); current = ""; i++; continue; }
+    if (ch === "|" || ch === ";" || ch === "\n") { pieces.push(current); current = ""; continue; }
+    current += ch;
+  }
+  pieces.push(current);
+  const statements: string[] = [];
+  for (const raw of pieces) {
+    let s = raw.trim();
+    if (s.length === 0) continue;
+    if (s.startsWith("& ") || s.startsWith("&\t")) s = s.slice(2).trimStart();
+    else if (s.startsWith(". ") || s.startsWith(".\t")) s = s.slice(2).trimStart();
+    if (s.length > 0 && s[0] === "(" && s[s.length - 1] === ")") s = s.slice(1, -1).trim();
+    else if (s.length > 0 && s[0] === "{" && s[s.length - 1] === "}") s = s.slice(1, -1).trim();
+    if (s.length > 0) statements.push(s);
+  }
+  return statements;
 }
 
 /** realpath of the deepest existing ancestor plus the remainder (the target may not exist yet). */
@@ -225,24 +269,28 @@ export class LocalGuardsPlug implements GateProvider {
       const approval = this.config.approval ?? "all";
       if (approval === "off") return "allow";
 
-      const firstToken = normalizeFirstToken(commandLine);
+      const statements = splitStatements(commandLine);
       const networkCommands = this.config.network_commands ?? DEFAULT_NETWORK_COMMANDS;
-      const isNetworkCommand = networkCommands.some((cmd) => cmd.toLowerCase() === firstToken);
+      const networkSet = new Set(networkCommands.map((cmd) => cmd.toLowerCase()));
+      const isNetworkCommand = statements.some((stmt) => networkSet.has(normalizeFirstToken(stmt)));
 
       const cwd = typeof descriptor.parameters["Cwd"] === "string" ? descriptor.parameters["Cwd"] : undefined;
       const cwdOutsideWorkspace = cwd !== undefined && !insideWorkspace(resolveRealPath(cwd, this.config.workspace), resolveRealPath(this.config.workspace, this.config.workspace));
 
       if (approval === "all") return "pending";
-      // approval === "unsafe": auto-allow only operator-configured prefixes
+      // approval === "unsafe": auto-allow only operator-configured prefixes on every statement
       const prefixes = this.config.auto_approve_prefixes ?? [];
-      const lowered = commandLine.trim().toLowerCase();
-      const operatorApproved = prefixes.some((prefix) => {
-        const folded = prefix.trim().toLowerCase();
-        if (folded.length === 0) return false;
-        if (folded.includes(" ")) return lowered.startsWith(folded);
-        return firstToken === folded;
+      const allStatementsApproved = statements.length > 0 && statements.every((stmt) => {
+        const stmtToken = normalizeFirstToken(stmt);
+        const stmtLowered = stmt.trim().toLowerCase();
+        return prefixes.some((prefix) => {
+          const folded = prefix.trim().toLowerCase();
+          if (folded.length === 0) return false;
+          if (folded.includes(" ")) return stmtLowered.startsWith(folded);
+          return stmtToken === folded;
+        });
       });
-      if (!operatorApproved) return "pending";
+      if (!allStatementsApproved) return "pending";
       if (isNetworkCommand) return "pending";
       if (cwdOutsideWorkspace) return "pending";
 
