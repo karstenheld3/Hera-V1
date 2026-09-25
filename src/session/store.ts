@@ -1,5 +1,5 @@
 // SessionStore: the Communicator-owned single writer of the session JSONL (HERAV1PROC-IP01 IS-05).
-// Durability: flush = OS write returned (always); fsync where the profile requires it (harness.fsync).
+// Durability: flush = OS write returned (always); fsync on by default (harness.fsync: false downgrades durability to the OS page cache).
 // Write failures propagate so the caller never acknowledges a line that is not on disk (EC-10).
 // Implements EventSink (HERAV1HRNS-SP01 FR-07) - the default JsonlSink.
 

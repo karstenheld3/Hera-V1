@@ -83,4 +83,12 @@ describe("HERAV1PRCF-TP01 schema", () => {
     expect(cfg3.harness.local.protected_paths).toEqual(["custom"]);
     expect(cfg3.harness.local.read_allowlist).toEqual([]);
   });
+
+  test("HERAV1PRCF-TP01-TC-36 harness defaults: fsync on, profile local; explicit false accepted", () => {
+    const { config } = parseHeraConfig({ roles: { generating: { model_id: "glm-5.2", effort: "high" } } }, "agent-config.json");
+    expect(config.harness.profile).toBe("local");
+    expect(config.harness.fsync).toBe(true);
+    const { config: off } = parseHeraConfig({ roles: { generating: { model_id: "a", effort: "high" } }, harness: { fsync: false } }, "x");
+    expect(off.harness.fsync).toBe(false);
+  });
 });

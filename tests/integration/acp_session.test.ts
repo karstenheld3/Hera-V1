@@ -6,6 +6,7 @@ import { AcpClient, assertStdoutPure } from "../harness/acp_client.ts";
 import { FAKE_SYSTEM, SCRIPTS, prepareRig } from "../harness/executor_rig.ts";
 import { removeDir } from "../harness/procs.ts";
 import { SchemaOracle } from "../harness/schema_validate.ts";
+import pkg from "../../package.json" with { type: "json" };
 
 const clients: AcpClient[] = [];
 const dirs: string[] = [];
@@ -61,7 +62,7 @@ describe("[integration] HERAV1ACP-TP01 handshake and sessions (fake client over 
     const early = await client.request("session/new", { cwd: workspace });
     expect(early.response.error?.message).toContain("handshake incomplete");
     const result = await retryHandshake(client, 2);
-    expect(result).toEqual({ protocolVersion: 1, agentInfo: { name: "hera", version: "1.0.1" }, agentCapabilities: { loadSession: true, promptCapabilities: { image: false, audio: false, embeddedContext: false } } });
+    expect(result).toEqual({ protocolVersion: 1, agentInfo: { name: "hera", version: pkg.version }, agentCapabilities: { loadSession: true, promptCapabilities: { image: false, audio: false, embeddedContext: false } } });
     const again = await client.request("initialize", { protocolVersion: 1 });
     expect(again.response.result).toEqual(result);
     expect(client.stderr()).toContain("answered identically");

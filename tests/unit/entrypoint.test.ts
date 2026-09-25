@@ -13,7 +13,6 @@ describe("HERAV1AGNT-TP01 entrypoint", () => {
     const result = await hera.run(["--version"]);
     expect(result.code).toBe(0);
     expect(result.stdout.trim()).toBe(`hera ${pkg.version}`);
-    expect(pkg.version).toBe("1.0.1");
   });
 
   test("HERAV1AGNT-TP01-TC-03 unknown flag exits 2 and names the flag", async () => {

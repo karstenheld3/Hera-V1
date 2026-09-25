@@ -6,6 +6,7 @@ import { assertNoSecretLeak } from "../harness/assertions.ts";
 import { FAKE_SYSTEM, SCRIPTS, prepareRig } from "../harness/executor_rig.ts";
 import { HeraProc } from "../harness/hera_proc.ts";
 import { removeDir } from "../harness/procs.ts";
+import pkg from "../../package.json" with { type: "json" };
 
 const IPPS = "e:\\Dev\\Hera-V0\\.agent";
 const dirs: string[] = [];
@@ -40,7 +41,7 @@ describe("[blackbox] HERAV1CLI-TP01 headless runs over three processes", () => {
     expect(types.indexOf("tool_call_requested")).toBeLessThan(types.indexOf("tool_call_finished"));
     // The executor's turn_finished must exist; the supervisor may emit model_called after it
     expect(types).toContain("turn_finished");
-    expect(result.stderr).toContain("Hera 1.0.1 [SCRIPTED] | generating: glm-5.2 (high)");
+    expect(result.stderr).toContain(`Hera ${pkg.version} [SCRIPTED] | generating: glm-5.2 (high)`);
     expect(result.stderr).toContain("Keys: not required (scripted adapter)");
     expect(result.stderr).toMatch(/Processes: executor pid='\d+', supervisor pid='\d+'\. Ready in \d+\.\d secs\./);
     expect(result.stderr).toContain("Created ");

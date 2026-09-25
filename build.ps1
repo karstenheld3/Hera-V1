@@ -130,13 +130,13 @@ if ($signThumbprint) {
 # ---------------------------------------------------------------------------- [ 2 / 7 ] bundle sync + key-leak guard
 Step 'Syncing bundle...'
 
-$lanaLibrary = Join-Path $RootDir '.agent'
-$lanaTools   = Join-Path $RootDir '.agent-tools'
+$agentLibrary = Join-Path $RootDir '.agent'
+$agentTools   = Join-Path $RootDir '.agent-tools'
 $bundleConfig = Join-Path $BundledDir 'config'
 $bundleAgent  = Join-Path $BundledDir 'agent'
 $bundleTools  = Join-Path $BundledDir 'tools'
 
-if (-not (Test-Path $lanaLibrary -PathType Container)) { Fail ".agent prompt library missing - bundle would lose the agent library (EC-03)." }
+if (-not (Test-Path $agentLibrary -PathType Container)) { Fail ".agent prompt library missing - bundle would lose the agent library (EC-03)." }
 
 # Clean and recreate staging targets (DD-08)
 if (Test-Path $bundleAgent)  { Remove-Item $bundleAgent  -Recurse -Force }
@@ -156,7 +156,7 @@ if (Test-Path (Join-Path $bundleConfig '.api-keys.txt')) { Fail '.api-keys.txt f
 if (Test-Path (Join-Path $bundleConfig 'agent-config.json')) { Fail 'agent-config.json found in staging - must never be bundled (FR-08).' }
 
 # Agent library: full copy from .agent/ (DD-08)
-robocopy $lanaLibrary $bundleAgent /MIR /NJH /NJS /NDL /NC /NS /NP | Out-Null
+robocopy $agentLibrary $bundleAgent /MIR /NJH /NJS /NDL /NC /NS /NP | Out-Null
 if ($LASTEXITCODE -ge 8) { Fail "agent library sync failed (robocopy exit $LASTEXITCODE)." }
 
 # Key-leak guard (IG-05, EC-04): API_KEY assignment with a real-key-shaped value (40+ char token) aborts
@@ -167,7 +167,7 @@ if ($keyLeaks) {
 }
 
 # External tools: rg.exe embedded as-is (no .bin rename, FR-08)
-$rgSource = Join-Path $lanaTools 'rg.exe'
+$rgSource = Join-Path $agentTools 'rg.exe'
 $toolsLabel = 'no tools'
 if (Test-Path $rgSource) {
   Copy-Item $rgSource (Join-Path $bundleTools 'rg.exe') -Force
@@ -337,12 +337,12 @@ if ($SkipSmoke) {
   Write-Host '  Key-leak scan of binary OK.'
 
   # No hera process alive
-  $lanaProcs = Get-Process -Name 'hera*' -ErrorAction SilentlyContinue
-  if ($lanaProcs) {
-    $lanaProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+  $heraProcs = Get-Process -Name 'hera*' -ErrorAction SilentlyContinue
+  if ($heraProcs) {
+    $heraProcs | Stop-Process -Force -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 500
-    $lanaProcs = Get-Process -Name 'hera*' -ErrorAction SilentlyContinue
-    if ($lanaProcs) { Fail "hera process still alive after smoke test (IG-03)." }
+    $heraProcs = Get-Process -Name 'hera*' -ErrorAction SilentlyContinue
+    if ($heraProcs) { Fail "hera process still alive after smoke test (IG-03)." }
   }
   Write-Host '  No survivor processes. OK.'
 

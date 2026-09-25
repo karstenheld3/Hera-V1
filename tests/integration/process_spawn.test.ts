@@ -5,6 +5,7 @@ import type { IpcMessage } from "../../src/process/envelope.ts";
 import { FakeComm } from "../harness/fake_comm.ts";
 import { HeraProc } from "../harness/hera_proc.ts";
 import { REPO_ROOT, makeTempDir, removeDir } from "../harness/procs.ts";
+import pkg from "../../package.json" with { type: "json" };
 
 const STUB = join(REPO_ROOT, "tests", "fixtures", "stub_roles", "stub_child.ts");
 const CONFIG = join(REPO_ROOT, "tests", "fixtures", "config_test.json");
@@ -47,7 +48,7 @@ describe("[integration] HERAV1PROC-TP01 spawn and handshake (FakeComm parent)", 
     if (hello.type === "hello") {
       expect(hello.payload.role).toBe("executor");
       expect(hello.payload.pid).toBe(comm.pid ?? -1);
-      expect(hello.payload.version).toBe("1.0.1");
+      expect(hello.payload.version).toBe(pkg.version);
       expect(hello.payload.standalone).toBe(process.env["HERA_TEST_BINARY"] !== undefined && process.env["HERA_TEST_BINARY"] !== "");
       expect(hello.payload.epoch).toBe(1);
     }

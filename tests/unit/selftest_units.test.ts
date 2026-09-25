@@ -5,6 +5,7 @@ import type { ModelRegistry, ParameterMapping, PricingTable } from "../../src/co
 import { cheapestPerMethod, levelsFor, prefixFor, testableModels } from "../../src/selftest/discovery.ts";
 import { ResultsWriter, categorySummaryLine, exitCodeFor, menuText, resultLine, summarize, type TestResult } from "../../src/selftest/report.ts";
 import { ALL_CODES, Budget, LIVE_CODES, OFFLINE_CODES, categories, parseSelftestArgs } from "../../src/selftest/runner.ts";
+import pkg from "../../package.json" with { type: "json" };
 
 const TMP = join(import.meta.dir, "..", ".tmp", "selftest_units");
 afterEach(() => rmSync(TMP, { recursive: true, force: true }));
@@ -86,7 +87,7 @@ describe("HERAV1STST-TP01 framework", () => {
     expect(onDisk.tests).toHaveLength(3);
     expect(onDisk.categories_run).toEqual(["01", "08"]);
     expect(onDisk.cost_usd).toBe(0.0002);
-    expect(onDisk.hera_version).toBe("1.0.1");
+    expect(onDisk.hera_version).toBe(pkg.version);
     expect(onDisk.scripted).toBe(true);
     expect(existsSync(`${writer.path}.tmp`)).toBe(false);
     // a second flush overwrites atomically

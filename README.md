@@ -1,5 +1,7 @@
 # Hera V1
 
+License: MIT - see LICENSE.
+
 Hera is an AI agent for knowledge work on files, code, and documents, designed to run as a backend component inside a corporate environment - on virtual machines and servers the organization controls, not on end-user devices. It ships as one self-contained executable with no runtime to install, executes every action through a deterministic control layer, records every byte exchanged with the model in an append-only session log (JSON Lines, JSONL) with a single writer, and sends no telemetry. The organization owns the rules the agent follows, the log of what it did, and the policy that decides what it may do. Hera ships with IPPS (https://github.com/karstenheld3/IPPS), a production-grade prompt library optimized for enterprise document intelligence work - research, specification, transcription, translation, fact-checking, and review - that the organization can adopt as is, extend, or replace.
 
 A task arrives in plain language - from an operator on the console, from a client application over the Agent Client Protocol (ACP), or from a scheduled job - "extract the deadlines from these contracts into a table", "check this folder against the naming policy", "run `/verify`". Hera reads, edits, searches, runs commands, and fetches web pages on that host until the task is done or a guard stops it.
@@ -152,7 +154,7 @@ An organization keeps the parts it needs, adds its own rules and workflows in th
 
 ### Governance and audit
 
-- **Session log**: one JSONL file per session under `.agent-data/sessions/`, written by the Communicator only. Its first line records the full system prompt, tool definitions, resolved configuration, and a definition hash; every later line is one timestamped event with producing process, run context, and sequence number. Never auto-deleted
+- **Session log**: one JSONL file per session under `.agent-data/sessions/`, written by the Communicator only. Its first line records the full system prompt, tool definitions, resolved configuration, and a definition hash; every later line is one timestamped event with producing process, run context, and sequence number. Never auto-deleted. Durability boundary: with fsync on (default) each line is flushed to disk before the write is acknowledged; with `harness.fsync: false` durability is to the OS page cache only
 - **Origin tagging**: every message segment, tool result, memory line, and injected block carries its origin (`user`, `tool`, `model`, `memory`, `file`, `web`, `system`)
 - **Memory integrity**: persisted memories carry an HMAC-SHA256 tag; lines that fail the check are dropped with a warning
 - **Supervisor interventions** are events in the log: guard blocks, stall recoveries, governance notes, cost alerts

@@ -1,6 +1,6 @@
 {
   "roles": {
-    "generator":  { "model_id": "claude-sonnet-4-6", "effort": "medium" },
+    "generator":  { "model_id": "claude-sonnet-4-5-20250929", "effort": "medium" },
     "summarizer": { "model_id": "gpt-4.1-mini", "effort": "low" },
     "websearch":  { "model_id": "gpt-4.1-mini", "effort": "low" }
   },

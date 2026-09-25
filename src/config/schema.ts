@@ -67,7 +67,7 @@ export const HarnessLocalSection = z
 export const HarnessSection = z
   .strictObject({
     profile: z.enum(["local", "passthrough", "scripted", "governed"]).default("local"),
-    fsync: z.boolean().default(false),
+    fsync: z.boolean().default(true),
     local: HarnessLocalSection,
   })
   .prefault({});

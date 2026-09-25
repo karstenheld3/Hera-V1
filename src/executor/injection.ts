@@ -109,10 +109,15 @@ export function buildUserMessage(content: string, injectedBlocks: string, meta: 
   return `${injectedBlocks}<user_request>\n${content}\n</user_request>\n\n<user_metadata>\ndate: ${meta.date}\ncwd: ${meta.cwd}\n</user_metadata>`;
 }
 
+/** U10: Escapes the untrusted_content closing delimiter inside text so tool output cannot close the wrapper early. */
+export function neutralizeDelimiter(text: string): string {
+  return text.replace(/<\/untrusted_content/gi, "&lt;/untrusted_content");
+}
+
 /** U10: Wraps tool result text in untrusted_content delimiters for wrapped tools; passes through unwrapped tools. */
 export function renderToolResult(text: string, toolName: string, callId: string): string {
   if (WRAPPED_TOOLS.has(toolName)) {
-    return `${UNTRUSTED_CONTENT_OPEN}tool" ref="${callId}">\n${text}\n${UNTRUSTED_CONTENT_CLOSE}`;
+    return `${UNTRUSTED_CONTENT_OPEN}tool" ref="${callId}">\n${neutralizeDelimiter(text)}\n${UNTRUSTED_CONTENT_CLOSE}`;
   }
   return text;
 }
