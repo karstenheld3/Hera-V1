@@ -1,6 +1,6 @@
 # Hera V1
 
-License: MIT - see LICENSE.
+License: GNU Affero General Public License v3.0 (AGPL-3.0) - see LICENSE.
 
 Hera is an AI agent for knowledge work on files, code, and documents, designed to run as a backend component inside a corporate environment - on virtual machines and servers the organization controls, not on end-user devices. It ships as one self-contained executable with no runtime to install, executes every action through a deterministic control layer, records every byte exchanged with the model in an append-only session log (JSON Lines, JSONL) with a single writer, and sends no telemetry. The organization owns the rules the agent follows, the log of what it did, and the policy that decides what it may do. Hera ships with IPPS (https://github.com/karstenheld3/IPPS), a production-grade prompt library optimized for enterprise document intelligence work - research, specification, transcription, translation, fact-checking, and review - that the organization can adopt as is, extend, or replace.
 
