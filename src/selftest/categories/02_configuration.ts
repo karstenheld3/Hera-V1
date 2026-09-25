@@ -45,7 +45,7 @@ export async function configurationCategory(ctx: SelftestContext): Promise<TestR
   const ws = config.roles.websearch;
   let supportsSearch = "unknown";
   try {
-    const adapter = await getAdapter(ws.provider, { keys: config.keys, env: ctx.env });
+    const adapter = await getAdapter(ws.provider, { keys: config.keys, env: ctx.env }); // harness-allow: U12 getAdapter()
     supportsSearch = adapter.supportsWebSearch() ? "web search supported" : "web search NOT supported";
   } catch (error) {
     supportsSearch = `adapter unavailable (${error instanceof Error ? error.message : String(error)})`;

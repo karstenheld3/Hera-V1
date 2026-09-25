@@ -97,7 +97,6 @@ let netEgressCounter = 0;
 /** Wraps fetch() through the gate as net.egress (H-01). */
 async function egressFetch(ctx: ToolContext, url: string, init: RequestInit): Promise<Response> {
   const gate = ctx.gate;
-  if (gate === undefined) return fetch(url, init);
   const descriptor = new EffectDescriptor({
     effect_id: `fx_net_${++netEgressCounter}`,
     kind: "net.egress",
@@ -106,7 +105,7 @@ async function egressFetch(ctx: ToolContext, url: string, init: RequestInit): Pr
   });
   let response: Response | undefined;
   const result = await gate.egress(descriptor, async () => {
-    response = await fetch(url, init);
+    response = await fetch(url, init); // harness-allow: U7 fetch()
     return { status: "ok" as const, text: "fetched" };
   });
   if (result.status === "blocked") throw new ToolError(`Cannot fetch '${url}': ${result.text}`, "The gate blocked this request.");

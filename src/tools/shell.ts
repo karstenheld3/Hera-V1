@@ -108,24 +108,20 @@ async function startProcess(commandLine: string, cwd: string, ctx: ToolContext):
   let proc: BunSubprocess;
   try {
     const gate = ctx.gate;
-    if (gate === undefined) {
-      proc = harnessSpawn(shellArgv(commandLine, ctx.os?.platform), { kind: "tool", cwd, env: { PAGER: "cat" }, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
-    } else {
-      const descriptor = new EffectDescriptor({
-        effect_id: `fx_spawn_${++spawnCounter}`,
-        kind: "process.spawn",
-        target: "shell",
-        parameters: { command_line: commandLine, cwd },
-      });
-      let spawned: BunSubprocess | undefined;
-      const result = await gate.egress(descriptor, async () => {
-        spawned = harnessSpawn(shellArgv(commandLine, ctx.os?.platform), { kind: "tool", cwd, env: { PAGER: "cat" }, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
-        return { status: "ok" as const, text: "spawned" };
-      });
-      if (result.status === "blocked") throw new ToolError(`Cannot run command: ${result.text}`, "The gate blocked this command.");
-      if (spawned === undefined) throw new ToolError("Cannot run command: gate returned no process", "Internal error.");
-      proc = spawned;
-    }
+    const descriptor = new EffectDescriptor({
+      effect_id: `fx_spawn_${++spawnCounter}`,
+      kind: "process.spawn",
+      target: "shell",
+      parameters: { command_line: commandLine, cwd },
+    });
+    let spawned: BunSubprocess | undefined;
+    const result = await gate.egress(descriptor, async () => {
+      spawned = harnessSpawn(shellArgv(commandLine, ctx.os?.platform), { kind: "tool", cwd, env: { PAGER: "cat" }, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+      return { status: "ok" as const, text: "spawned" };
+    });
+    if (result.status === "blocked") throw new ToolError(`Cannot run command: ${result.text}`, "The gate blocked this command.");
+    if (spawned === undefined) throw new ToolError("Cannot run command: gate returned no process", "Internal error.");
+    proc = spawned;
   } catch (error) {
     if (error instanceof ToolError) throw error;
     const message = error instanceof Error ? error.message : String(error);

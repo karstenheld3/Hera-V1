@@ -125,7 +125,7 @@ export function createSupervisor(epoch: number | undefined, opts: SupervisorOpti
     inFlightModelCalls++;
     const started = performance.now();
     try {
-      const outcome = await extractMemories(store, turn, adapters.memory, config.roles.memory, sessionId, gate, undefined, emit);
+      const outcome = await extractMemories(store, turn, adapters.memory, config.roles.memory, sessionId, gate!, undefined, emit);
       if (outcome.call !== undefined) {
         await rt.sendEvent(roleUsageEvent("memory", outcome.call.usage, roleCost("memory", outcome.call.usage), outcome.call.request, outcome.call.text), false);
         dlog("llm", "response", { role: "memory", provider: config.roles.memory.provider, model: config.roles.memory.modelId, dur_ms: Math.round(performance.now() - started), in_tok: outcome.call.usage.uncachedInput, cache_read: outcome.call.usage.cacheRead, out_tok: outcome.call.usage.output, cost_usd: roleCost("memory", outcome.call.usage) ?? null, tool_calls: 0 });
@@ -146,7 +146,7 @@ export function createSupervisor(epoch: number | undefined, opts: SupervisorOpti
     inFlightModelCalls++;
     const started = performance.now();
     try {
-      const outcome = await retrieveMemories(store, payload.text, config.config.supervisor.memory_top_k, adapters.memory, config.roles.memory, gate, undefined, emit);
+      const outcome = await retrieveMemories(store, payload.text, config.config.supervisor.memory_top_k, adapters.memory, config.roles.memory, gate!, undefined, emit);
       if (outcome.call !== undefined) {
         await rt.sendEvent(roleUsageEvent("memory", outcome.call.usage, roleCost("memory", outcome.call.usage), outcome.call.request, outcome.call.text), false);
         dlog("llm", "response", { role: "memory", provider: config.roles.memory.provider, model: config.roles.memory.modelId, dur_ms: Math.round(performance.now() - started), in_tok: outcome.call.usage.uncachedInput, cache_read: outcome.call.usage.cacheRead, out_tok: outcome.call.usage.output, cost_usd: roleCost("memory", outcome.call.usage) ?? null, tool_calls: 0 });
@@ -170,7 +170,7 @@ export function createSupervisor(epoch: number | undefined, opts: SupervisorOpti
   };
 
   const review = async (reasons: TriggerReason[]): Promise<void> => {
-    if (triggers === undefined || adapters === undefined || config === undefined || rt === undefined || gate === undefined || !state.reseedDone) return;
+    if (triggers === undefined || adapters === undefined || config === undefined || rt === undefined || !state.reseedDone) return;
     const rt0 = rt;
     const emit: EmitFn = (event, awaitAck) => rt0.sendEvent(event, awaitAck ?? false);
     inFlightModelCalls++;
@@ -178,7 +178,7 @@ export function createSupervisor(epoch: number | undefined, opts: SupervisorOpti
     try {
       const input = buildReviewInput(reasons, triggers.recentCalls, triggers.userRequest, triggers.turnCostUsd, rules);
       const covered = triggers.recentCalls.length;
-      const outcome = await runReview(input, adapters.supervisor, config.roles.supervisor, gate, undefined, emit);
+      const outcome = await runReview(input, adapters.supervisor, config.roles.supervisor, gate!, undefined, emit);
       const cost = roleCost("supervisor", outcome.usage);
       await rt.sendEvent(roleUsageEvent("supervisor", outcome.usage, cost, outcome.request, outcome.text), false);
       dlog("llm", "response", { role: "supervisor", provider: config.roles.supervisor.provider, model: config.roles.supervisor.modelId, dur_ms: Math.round(performance.now() - started), in_tok: outcome.usage.uncachedInput, cache_read: outcome.usage.cacheRead, out_tok: outcome.usage.output, cost_usd: cost ?? null, tool_calls: 0 });
@@ -254,7 +254,7 @@ export function createSupervisor(epoch: number | undefined, opts: SupervisorOpti
       sessionId = payload.session_id;
       workspace = payload.workspace;
       rules = loadRules(config.agentFolder, config.config.rule_block_max_chars);
-      adapters = opts.adapters ?? { supervisor: await getAdapter(config.roles.supervisor.provider, { keys: config.keys, env }), memory: await getAdapter(config.roles.memory.provider, { keys: config.keys, env }) };
+      adapters = opts.adapters ?? { supervisor: await getAdapter(config.roles.supervisor.provider, { keys: config.keys, env }), memory: await getAdapter(config.roles.memory.provider, { keys: config.keys, env }) }; // harness-allow: U7 getAdapter()
       const gatePlug = opts.gatePlug ?? createPlug({ profile: config.config.harness.profile, denylist: config.config.supervisor.denylist, workspace, read_allowlist: config.config.harness.local.read_allowlist, protected_paths: config.config.harness.local.protected_paths, network_commands: config.config.harness.local.network_commands, approval: config.config.harness.local.approval, env });
       gate = new Gate(gatePlug);
       const plugHash = computePlugHash(config.config.harness.profile, config.config.supervisor.denylist);
@@ -309,13 +309,13 @@ export function createSupervisor(epoch: number | undefined, opts: SupervisorOpti
           return;
         case "halt": {
           const haltReason = msg.payload.reason ?? "halted";
-          gate?.halt(haltReason);
-          const inFlight = gate?.collectInFlight() ?? [];
+          gate!.halt(haltReason);
+          const inFlight = gate!.collectInFlight() ?? [];
           runtime.send("halted", { reason: haltReason, in_flight: inFlight });
           return;
         }
         case "resolve":
-          gate?.resolve(msg.payload.effect_id);
+          gate!.resolve(msg.payload.effect_id);
           return;
         default:
           return;

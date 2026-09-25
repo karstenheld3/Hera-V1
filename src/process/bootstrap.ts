@@ -27,7 +27,7 @@ export interface SpawnChildOptions {
 }
 
 /** Spawns one child role with the DD-05 stdio contract: stdin ignore, stdout ignore, stderr inherit, ipc json. */
-export function spawnChild(role: ChildRole, epoch: number, opts: SpawnChildOptions): BunSubprocess {
+export function spawnChild(role: ChildRole, epoch: number, opts: SpawnChildOptions): BunSubprocess { // harness-allow: U12 spawnChild()
   const env: Record<string, string | undefined> = { ...opts.env };
   if (opts.debugLines !== undefined) env["HERA_DEBUG_LINES"] = opts.debugLines;
   else delete env["HERA_DEBUG_LINES"];

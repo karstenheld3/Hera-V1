@@ -6,6 +6,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { Gate } from "../../src/harness/gate.ts";
+import { allowAllGate } from "../helpers/gate.ts";
 import { EffectDescriptor } from "../../src/harness/descriptor.ts";
 import { ScriptedPlug } from "../../src/harness/plugs/scripted.ts";
 import { PassThroughPlug } from "../../src/harness/plugs/passthrough.ts";
@@ -314,8 +315,8 @@ describe("HERAV1HRNS-TP01-TC-20: two Supervisors sharing storage", () => {
     dirs.push(dir);
     const hash = workspaceHash("C:/Work/SharedProject");
 
-    const store1 = MemoryStore.open(dir, hash, { runCtx: "run_a" });
-    const store2 = MemoryStore.open(dir, hash, { runCtx: "run_b" });
+    const store1 = MemoryStore.open(dir, hash, { gate: allowAllGate(), runCtx: "run_a" });
+    const store2 = MemoryStore.open(dir, hash, { gate: allowAllGate(), runCtx: "run_b" });
 
     // Both write to the same workspace file
     store1.append({
@@ -364,7 +365,7 @@ describe("HERAV1HRNS-TP01-TC-20: two Supervisors sharing storage", () => {
     expect(uniqueIds.size).toBe(3);
 
     // Reopen and verify latest-line-wins
-    const reopened = MemoryStore.open(dir, hash);
+    const reopened = MemoryStore.open(dir, hash, allowAllGate());
     expect(reopened.size).toBe(3);
     expect(reopened.memories.get("mem_00001")?.text).toBe("fact from supervisor 1");
     expect(reopened.memories.get("mem_00002")?.text).toBe("fact from supervisor 2");
@@ -376,8 +377,8 @@ describe("HERAV1HRNS-TP01-TC-20: two Supervisors sharing storage", () => {
     dirs.push(dir);
     const hash = workspaceHash("C:/Work/Concurrent");
 
-    const store1 = MemoryStore.open(dir, hash, { runCtx: "run_a" });
-    const store2 = MemoryStore.open(dir, hash, { runCtx: "run_b" });
+    const store1 = MemoryStore.open(dir, hash, { gate: allowAllGate(), runCtx: "run_a" });
+    const store2 = MemoryStore.open(dir, hash, { gate: allowAllGate(), runCtx: "run_b" });
 
     // Interleave appends from both stores
     for (let i = 0; i < 10; i++) {

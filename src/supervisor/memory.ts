@@ -66,7 +66,7 @@ export function normalizeText(text: string): string {
 }
 
 export interface MemoryStoreOptions {
-  gate?: Gate;
+  gate: Gate;
   runCtx?: string;
   retentionDays?: number;
   secretPath?: string;
@@ -94,13 +94,13 @@ export class MemoryStore {
     this.secretPath = opts.secretPath;
   }
 
-  private gate?: Gate;
+  private gate: Gate;
   private secret: Buffer | undefined;
   private readonly secretPath: string | undefined;
 
-  static open(dir: string, hash: string, opts?: MemoryStoreOptions | Gate): MemoryStore {
+  static open(dir: string, hash: string, opts: MemoryStoreOptions | Gate): MemoryStore {
     mkdirSync(dir, { recursive: true });
-    const resolved: MemoryStoreOptions = opts instanceof Gate ? { gate: opts } : (opts ?? {});
+    const resolved: MemoryStoreOptions = opts instanceof Gate ? { gate: opts } : opts;
     const store = new MemoryStore(dir, join(dir, `workspace-${hash}.jsonl`), join(dir, "global.jsonl"), resolved);
     if (store.secretPath !== undefined) {
       store.secret = store.loadOrCreateSecret();
@@ -222,7 +222,6 @@ export class MemoryStore {
   }
 
   async appendGated(line: MemoryLine, emit?: EmitFn): Promise<void> {
-    if (this.gate === undefined) { this.append(line); return; }
     const scope = "deleted" in line ? (this.memories.get(line.id)?.scope ?? "workspace") : line.scope;
     const descriptor = new EffectDescriptor({
       effect_id: `fx_mem_${++this.memEgressCounter}`,
@@ -346,10 +345,10 @@ export interface ModelCallResult {
   request: string;
 }
 
-async function callModel(adapter: ProviderAdapter, role: ResolvedRole, system: string, request: string, gate: Gate | undefined, signal?: AbortSignal, emit?: EmitFn): Promise<ModelCallResult> {
+async function callModel(adapter: ProviderAdapter, role: ResolvedRole, system: string, request: string, gate: Gate, signal?: AbortSignal, emit?: EmitFn): Promise<ModelCallResult> {
   let text = "";
   let usage: Usage = { uncachedInput: 0, cacheWrite: 0, cacheRead: 0, output: 0 };
-  const stream = gate !== undefined ? egressModelInvoke(adapter, gate, { system, tools: [], messages: [{ role: "user", content: request }], role }, signal, emit) : adapter.streamTurn({ system, tools: [], messages: [{ role: "user", content: request }], role }, signal);
+  const stream = egressModelInvoke(adapter, gate, { system, tools: [], messages: [{ role: "user", content: request }], role }, signal, emit);
   for await (const delta of stream) {
     if (delta.kind === "text") text += delta.text;
     else if (delta.kind === "usage") usage = delta.usage;
@@ -363,7 +362,7 @@ export interface ExtractOutcome {
   call: ModelCallResult | undefined;
 }
 
-export async function extractMemories(store: MemoryStore, turn: TurnSummary, adapter: ProviderAdapter, role: ResolvedRole, sessionId: string, gate: Gate | undefined, signal?: AbortSignal, emit?: EmitFn): Promise<ExtractOutcome> {
+export async function extractMemories(store: MemoryStore, turn: TurnSummary, adapter: ProviderAdapter, role: ResolvedRole, sessionId: string, gate: Gate, signal?: AbortSignal, emit?: EmitFn): Promise<ExtractOutcome> {
   if (isTrivialTurn(turn)) return { created: [], touched: [], call: undefined };
   const request = `User request:\n${turn.userRequest.slice(0, 2000)}\n\nAssistant text:\n${turn.assistantText.slice(0, 4000)}\n\nTools used: ${turn.toolNames.join(", ") || "(none)"}`;
   const call = await callModel(adapter, role, EXTRACT_SYSTEM_PROMPT, request, gate, signal, emit);
@@ -390,7 +389,7 @@ export interface RetrieveOutcome {
   call: ModelCallResult | undefined;
 }
 
-export async function retrieveMemories(store: MemoryStore, promptText: string, topK: number, adapter: ProviderAdapter, role: ResolvedRole, gate: Gate | undefined, signal?: AbortSignal, emit?: EmitFn): Promise<RetrieveOutcome> {
+export async function retrieveMemories(store: MemoryStore, promptText: string, topK: number, adapter: ProviderAdapter, role: ResolvedRole, gate: Gate, signal?: AbortSignal, emit?: EmitFn): Promise<RetrieveOutcome> {
   const candidates = store.candidates(topK);
   if (candidates.length === 0) return { selected: [], call: undefined };
   const list = candidates.map((m) => `- ${m.id} [${m.scope}] ${m.text}`).join("\n");

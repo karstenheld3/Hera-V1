@@ -12,6 +12,7 @@ import { ReviewTriggers, Reviewer, buildReviewInput, parseReviewText, renderRevi
 import { StallWatchdog, parsePhaseSince } from "../../src/supervisor/watchdog.ts";
 import { Gate } from "../../src/harness/gate.ts";
 import { PassThroughPlug } from "../../src/harness/plugs/passthrough.ts";
+import { allowAllGate } from "../helpers/gate.ts";
 import { assertNoSecretLeak } from "../harness/assertions.ts";
 import { makeTempDir, removeDir } from "../harness/procs.ts";
 
@@ -192,7 +193,7 @@ describe("HERAV1SUPV-TP01 memory", () => {
     expect(hash).toBe(workspaceHash("c:\\work\\proj"));
     writeFileSync(join(dir, `workspace-${hash}.jsonl`), ['{"id":"mem_00001","text":"old text","scope":"workspace","tags":[],"created":"a","last_used":"a","uses":0,"source_session":"s"}', '{"id":"mem_00001","text":"new text","scope":"workspace","tags":[],"created":"a","last_used":"b","uses":1,"source_session":"s"}', "{corrupt", '{"id":"mem_00002","text":"gone","scope":"workspace","tags":[],"created":"a","last_used":"a","uses":0,"source_session":"s"}', '{"id":"mem_00002","deleted":true,"ts":"c","reason":"superseded"}'].join("\n"));
     writeFileSync(join(dir, "global.jsonl"), '{"id":"mem_00003","text":"global fact","scope":"global","tags":["g"],"created":"a","last_used":"a","uses":0,"source_session":"s"}\n');
-    const store = MemoryStore.open(dir, hash);
+    const store = MemoryStore.open(dir, hash, allowAllGate());
     expect(store.size).toBe(2);
     expect(store.memories.get("mem_00001")?.text).toBe("new text");
     expect(store.warnings).toHaveLength(1);
@@ -207,18 +208,18 @@ describe("HERAV1SUPV-TP01 memory", () => {
   test("HERAV1SUPV-TP01-TC-27/28 extraction: trivial turns skipped, key-shaped candidates dropped, 500-char cap, dedupe touches", async () => {
     const dir = makeTempDir("mem2");
     dirs.push(dir);
-    const store = MemoryStore.open(dir, "abc");
+    const store = MemoryStore.open(dir, "abc", allowAllGate());
     expect(isTrivialTurn({ userRequest: "hi", assistantText: "hello", toolNames: [] })).toBe(true);
-    const skipped = await extractMemories(store, { userRequest: "hi", assistantText: "hello", toolNames: [] }, replying(["[]"]), memRole, "s1", undefined);
+    const skipped = await extractMemories(store, { userRequest: "hi", assistantText: "hello", toolNames: [] }, replying(["[]"]), memRole, "s1", allowAllGate());
     expect(skipped.call).toBeUndefined();
     const decoy = "sk-HERA_DECOY_abcdefghijklmnopqrstuvwxyz0123456789";
     const adapter = replying([`Here you go:\n[{"text": "The project uses tabs for indentation", "scope": "workspace", "tags": ["style"]}, {"text": "API key is ${decoy}", "scope": "global"}, {"text": "${"long ".repeat(200)}", "scope": "workspace"}]`, '[{"text": "the project uses TABS for indentation", "scope": "workspace"}]']);
-    const first = await extractMemories(store, { userRequest: "format", assistantText: "x".repeat(300), toolNames: ["edit"] }, adapter, memRole, "s1", undefined);
+    const first = await extractMemories(store, { userRequest: "format", assistantText: "x".repeat(300), toolNames: ["edit"] }, adapter, memRole, "s1", allowAllGate());
     expect(first.created).toHaveLength(2);
     expect(first.created[0]?.text).toBe("The project uses tabs for indentation");
     expect(first.created[1]?.text.length).toBe(500);
     assertNoSecretLeak([readFileSync(store.workspaceFile, "utf8")], undefined, [decoy]);
-    const second = await extractMemories(store, { userRequest: "format", assistantText: "y".repeat(300), toolNames: ["edit"] }, adapter, memRole, "s2", undefined);
+    const second = await extractMemories(store, { userRequest: "format", assistantText: "y".repeat(300), toolNames: ["edit"] }, adapter, memRole, "s2", allowAllGate());
     expect(second.created).toHaveLength(0);
     expect(second.touched).toEqual([first.created[0]?.id as string]);
     expect(store.memories.get(first.created[0]?.id as string)?.uses).toBe(1);
@@ -228,11 +229,11 @@ describe("HERAV1SUPV-TP01 memory", () => {
   test("HERAV1SUPV-TP01-TC-29/30 retrieval: no call with zero candidates; ranking call returns ids; top_k cap; uses updated", async () => {
     const dir = makeTempDir("mem3");
     dirs.push(dir);
-    const store = MemoryStore.open(dir, "abc");
-    const none = await retrieveMemories(store, "anything", 5, replying(["[]"]), memRole, undefined);
+    const store = MemoryStore.open(dir, "abc", allowAllGate());
+    const none = await retrieveMemories(store, "anything", 5, replying(["[]"]), memRole, allowAllGate());
     expect(none.call).toBeUndefined();
     for (let i = 1; i <= 8; i++) store.append({ id: store.newId(), text: `fact ${i}`, scope: i === 8 ? "global" : "workspace", tags: [], created: "a", last_used: `2026-01-0${i}`, uses: 0, source_session: "s" });
-    const outcome = await retrieveMemories(store, "tell me facts", 2, replying(['["mem_00003", "mem_00008", "mem_00001", "mem_99999"]']), memRole, undefined);
+    const outcome = await retrieveMemories(store, "tell me facts", 2, replying(['["mem_00003", "mem_00008", "mem_00001", "mem_99999"]']), memRole, allowAllGate());
     expect(outcome.selected.map((m) => m.id)).toEqual(["mem_00003", "mem_00008"]);
     expect(outcome.call?.request).toContain("at most 2 ids");
     expect(store.memories.get("mem_00003")?.uses).toBe(1);
@@ -242,15 +243,15 @@ describe("HERAV1SUPV-TP01 memory", () => {
   test("HERAV1SUPV-TP01-TC-31 U9: memory extraction carries origin; round-trip preserves origin", async () => {
     const dir = makeTempDir("mem4");
     dirs.push(dir);
-    const store = MemoryStore.open(dir, "abc");
+    const store = MemoryStore.open(dir, "abc", allowAllGate());
     const adapter = replying(['[{"text": "user prefers dark mode", "scope": "workspace", "tags": [], "origin": {"kind": "user", "ref": "prompt_1"}}]']);
-    const outcome = await extractMemories(store, { userRequest: "set theme", assistantText: "ok".repeat(150), toolNames: ["edit"] }, adapter, memRole, "s1", undefined);
+    const outcome = await extractMemories(store, { userRequest: "set theme", assistantText: "ok".repeat(150), toolNames: ["edit"] }, adapter, memRole, "s1", allowAllGate());
     expect(outcome.created).toHaveLength(1);
     expect(outcome.created[0]?.origin).toEqual({ kind: "user", ref: "prompt_1" });
     const file = readFileSync(store.workspaceFile, "utf8");
     expect(file).toContain('"origin"');
     expect(file).toContain('"prompt_1"');
-    const reopened = MemoryStore.open(dir, "abc");
+    const reopened = MemoryStore.open(dir, "abc", allowAllGate());
     expect(reopened.memories.get(outcome.created[0]?.id as string)?.origin).toEqual({ kind: "user", ref: "prompt_1" });
   });
 
@@ -258,8 +259,8 @@ describe("HERAV1SUPV-TP01 memory", () => {
     const dir = makeTempDir("mem_concurrent");
     dirs.push(dir);
     const hash = workspaceHash("C:/Work/Proj");
-    const store1 = MemoryStore.open(dir, hash, { runCtx: "run_a" });
-    const store2 = MemoryStore.open(dir, hash, { runCtx: "run_b" });
+    const store1 = MemoryStore.open(dir, hash, { gate: allowAllGate(), runCtx: "run_a" });
+    const store2 = MemoryStore.open(dir, hash, { gate: allowAllGate(), runCtx: "run_b" });
     store1.append({ id: "mem_00001", text: "fact from writer 1", scope: "workspace", tags: [], created: "2026-01-01T00:00:00Z", last_used: "2026-01-01T00:00:00Z", uses: 0, source_session: "s1" });
     store2.append({ id: "mem_00002", text: "fact from writer 2", scope: "workspace", tags: [], created: "2026-01-01T00:00:01Z", last_used: "2026-01-01T00:00:01Z", uses: 0, source_session: "s2" });
     store1.append({ id: "mem_00003", text: "second fact from writer 1", scope: "workspace", tags: [], created: "2026-01-01T00:00:02Z", last_used: "2026-01-01T00:00:02Z", uses: 0, source_session: "s1" });
@@ -270,7 +271,7 @@ describe("HERAV1SUPV-TP01 memory", () => {
     expect(ids).toContain("mem_00001");
     expect(ids).toContain("mem_00002");
     expect(ids).toContain("mem_00003");
-    const reopened = MemoryStore.open(dir, hash);
+    const reopened = MemoryStore.open(dir, hash, allowAllGate());
     expect(reopened.size).toBe(3);
     expect(reopened.memories.get("mem_00001")?.text).toBe("fact from writer 1");
     expect(reopened.memories.get("mem_00002")?.text).toBe("fact from writer 2");
@@ -290,10 +291,10 @@ describe("HERAV1SUPV-TP01 memory", () => {
   test("HERAV1SUPV-TP01-TC-40 memory injection wraps each memory in untrusted_content with provenance label", async () => {
     const dir = makeTempDir("mem-wrap");
     dirs.push(dir);
-    const store = MemoryStore.open(dir, "abc");
+    const store = MemoryStore.open(dir, "abc", allowAllGate());
     store.append({ id: store.newId(), text: "project uses tabs", scope: "workspace", tags: [], created: "a", last_used: "a", uses: 0, source_session: "s1_session", origin: { kind: "model", ref: "s1" } });
     store.append({ id: store.newId(), text: "user prefers dark mode", scope: "global", tags: [], created: "a", last_used: "a", uses: 0, source_session: "s2_session", origin: { kind: "user", ref: "p1" } });
-    const outcome = await retrieveMemories(store, "tabs and dark mode", 5, replying(['["mem_00001", "mem_00002"]']), memRole, undefined);
+    const outcome = await retrieveMemories(store, "tabs and dark mode", 5, replying(['["mem_00001", "mem_00002"]']), memRole, allowAllGate());
     expect(outcome.selected).toHaveLength(2);
     const { UNTRUSTED_CONTENT_OPEN, UNTRUSTED_CONTENT_CLOSE } = await import("../../src/models.ts");
     for (const m of outcome.selected) {
@@ -310,13 +311,13 @@ describe("HERAV1SUPV-TP01 memory", () => {
     const dir = makeTempDir("mem_mac_rt");
     dirs.push(dir);
     const secretPath = memorySecretPath(dir);
-    const store = MemoryStore.open(dir, "abc", { secretPath });
+    const store = MemoryStore.open(dir, "abc", { gate: allowAllGate(), secretPath });
     store.append({ id: store.newId(), text: "fact one", scope: "workspace", tags: [], created: "a", last_used: "a", uses: 0, source_session: "s1" });
     store.append({ id: store.newId(), text: "fact two", scope: "global", tags: [], created: "a", last_used: "a", uses: 0, source_session: "s2" });
     expect(store.size).toBe(2);
     const file = readFileSync(store.workspaceFile, "utf8");
     expect(file).toContain('"mac"');
-    const reopened = MemoryStore.open(dir, "abc", { secretPath });
+    const reopened = MemoryStore.open(dir, "abc", { gate: allowAllGate(), secretPath });
     expect(reopened.size).toBe(2);
     expect(reopened.warnings).toHaveLength(0);
     expect(reopened.memories.get("mem_00001")?.text).toBe("fact one");
@@ -327,7 +328,7 @@ describe("HERAV1SUPV-TP01 memory", () => {
     const dir = makeTempDir("mem_tamper");
     dirs.push(dir);
     const secretPath = memorySecretPath(dir);
-    const store = MemoryStore.open(dir, "abc", { secretPath });
+    const store = MemoryStore.open(dir, "abc", { gate: allowAllGate(), secretPath });
     store.append({ id: store.newId(), text: "original", scope: "workspace", tags: [], created: "a", last_used: "a", uses: 0, source_session: "s1" });
     const file = store.workspaceFile;
     const lines = readFileSync(file, "utf8").split(/\r?\n/).filter((l) => l.trim().length > 0);
@@ -335,7 +336,7 @@ describe("HERAV1SUPV-TP01 memory", () => {
     parsed["text"] = "tampered";
     const tamperedMac = parsed["mac"] as string;
     writeFileSync(file, JSON.stringify({ ...parsed, mac: tamperedMac }) + "\n");
-    const reopened = MemoryStore.open(dir, "abc", { secretPath });
+    const reopened = MemoryStore.open(dir, "abc", { gate: allowAllGate(), secretPath });
     expect(reopened.size).toBe(0);
     expect(reopened.warnings.some((w) => w.includes("1 memory lines failed integrity check and were skipped"))).toBe(true);
   });
@@ -345,7 +346,7 @@ describe("HERAV1SUPV-TP01 memory", () => {
     dirs.push(dir);
     const secretPath = memorySecretPath(dir);
     writeFileSync(join(dir, "workspace-abc.jsonl"), JSON.stringify({ id: "mem_00001", text: "bad mac", scope: "workspace", tags: [], created: "a", last_used: "a", uses: 0, source_session: "s1", mac: "deadbeef" }) + "\n");
-    const reopened = MemoryStore.open(dir, "abc", { secretPath });
+    const reopened = MemoryStore.open(dir, "abc", { gate: allowAllGate(), secretPath });
     expect(reopened.size).toBe(0);
     expect(reopened.warnings.some((w) => w.includes("1 memory lines failed integrity check and were skipped"))).toBe(true);
   });
@@ -354,12 +355,12 @@ describe("HERAV1SUPV-TP01 memory", () => {
     const dir = makeTempDir("mem_nosecret");
     dirs.push(dir);
     const secretPath = memorySecretPath(dir);
-    const store = MemoryStore.open(dir, "abc", { secretPath });
+    const store = MemoryStore.open(dir, "abc", { gate: allowAllGate(), secretPath });
     store.append({ id: store.newId(), text: "fact one", scope: "workspace", tags: [], created: "a", last_used: "a", uses: 0, source_session: "s1" });
     store.append({ id: store.newId(), text: "fact two", scope: "workspace", tags: [], created: "a", last_used: "a", uses: 0, source_session: "s2" });
     expect(store.size).toBe(2);
     unlinkSync(secretPath);
-    const reopened = MemoryStore.open(dir, "abc", { secretPath });
+    const reopened = MemoryStore.open(dir, "abc", { gate: allowAllGate(), secretPath });
     expect(reopened.size).toBe(0);
     expect(reopened.warnings.some((w) => w.includes("2 memory lines failed integrity check and were skipped"))).toBe(true);
   });
@@ -370,14 +371,14 @@ describe("HERAV1SUPV-TP01 memory", () => {
     const secretPath = memorySecretPath(dir);
     const legacyLine = JSON.stringify({ id: "mem_00001", text: "legacy fact", scope: "workspace", tags: [], created: "a", last_used: "a", uses: 0, source_session: "s1" });
     writeFileSync(join(dir, "workspace-abc.jsonl"), legacyLine + "\n");
-    const store = MemoryStore.open(dir, "abc", { secretPath });
+    const store = MemoryStore.open(dir, "abc", { gate: allowAllGate(), secretPath });
     expect(store.size).toBe(1);
     expect(store.memories.get("mem_00001")?.text).toBe("legacy fact");
     const file = readFileSync(store.workspaceFile, "utf8");
     const parsed = JSON.parse(file.trim()) as Record<string, unknown>;
     expect(parsed["migrated"]).toBe(true);
     expect(parsed["mac"]).toBeDefined();
-    const store2 = MemoryStore.open(dir, "abc", { secretPath });
+    const store2 = MemoryStore.open(dir, "abc", { gate: allowAllGate(), secretPath });
     expect(store2.size).toBe(1);
     expect(store2.memories.get("mem_00001")?.migrated).toBe(true);
     expect(store2.warnings).toHaveLength(0);
@@ -387,9 +388,9 @@ describe("HERAV1SUPV-TP01 memory", () => {
     const dir = makeTempDir("mem_label");
     dirs.push(dir);
     const secretPath = memorySecretPath(dir);
-    const store = MemoryStore.open(dir, "abc", { secretPath });
+    const store = MemoryStore.open(dir, "abc", { gate: allowAllGate(), secretPath });
     store.append({ id: store.newId(), text: "project uses tabs", scope: "workspace", tags: [], created: "a", last_used: "a", uses: 0, source_session: "s1_session", origin: { kind: "user", ref: "p1" } });
-    const outcome = await retrieveMemories(store, "tabs", 5, replying(['["mem_00001"]']), memRole, undefined);
+    const outcome = await retrieveMemories(store, "tabs", 5, replying(['["mem_00001"]']), memRole, allowAllGate());
     expect(outcome.selected).toHaveLength(1);
     const m = outcome.selected[0]!;
     const label = `[memory ${m.id}, from session ${m.source_session.slice(0, 8)}, origin ${m.origin?.kind ?? "model"}]`;

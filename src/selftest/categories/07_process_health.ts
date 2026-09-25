@@ -57,7 +57,7 @@ export async function processHealthCategory(ctx: SelftestContext): Promise<TestR
       spawnedAt,
       exitCode: undefined,
     };
-    child.proc = spawnChild(role, 1, {
+    child.proc = spawnChild(role, 1, { // harness-allow: U12 spawnChild()
       cwd: ctx.appDir,
       env,
       main: ctx.entryMain,

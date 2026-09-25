@@ -13,6 +13,9 @@ import { SessionStore, type EventSink } from "../../src/session/store.ts";
 import { SinkRouter, type EmitFn } from "../../src/harness/sink.ts";
 import { nowTs, readJsonlFile, type AgentEvent } from "../../src/events.ts";
 import { REPO_ROOT, makeTempDir, removeDir, waitFor } from "../harness/procs.ts";
+import { toolCtx } from "../harness/tool_ctx.ts";
+import { runCommand } from "../../src/tools/shell.ts";
+import type { ToolContext } from "../../src/tools/registry.ts";
 import { SCRIPTS, prepareRig } from "../harness/executor_rig.ts";
 import { HeraProc, type ChildHandle } from "../harness/hera_proc.ts";
 
@@ -41,10 +44,10 @@ afterEach(async () => {
   }
 });
 
-describe("HERAV1HRNS-TP01-TC-01: bypass via lint plus injected direct call", () => {
+describe("HERAV1HRNS-TP01-TC-01: dispatch is unreachable without the gate", () => {
   test("lint script exists and is runnable", async () => {
     const lintPath = join(REPO_ROOT, "scripts", "lint_harness.ts");
-    const proc = Bun.spawn(["bun", "run", lintPath], {
+    const proc = Bun.spawn([process.execPath, lintPath], {
       cwd: REPO_ROOT,
       stdout: "pipe",
       stderr: "pipe",
@@ -57,34 +60,40 @@ describe("HERAV1HRNS-TP01-TC-01: bypass via lint plus injected direct call", () 
     expect(stdout).toContain("0 violations");
   }, 15000);
 
-  test("an injected direct call raises at run time (gate refuses bypass)", async () => {
-    // Simulate a bypass: calling dispatch directly without going through execute()
-    // The gate's execute() is the only path; a direct dispatch has no gate answer
-    const plug = new ScriptedPlug([{ answer: "allow" }]);
+  test("gate with a blocking plug refuses dispatch; shell tool throws and spawns nothing", async () => {
+    // (a) a Gate whose plug answers block refuses the dispatch
+    const plug = new ScriptedPlug([{ answer: { answer: "block", reason: "test: blocked by scripted plug" } }]);
     const gate = new Gate(plug);
     const descriptor = new EffectDescriptor({
-      effect_id: "fx_bypass",
+      effect_id: "fx_block",
       kind: "tool.invoke",
       target: "read_file",
       parameters: {},
     });
-
-    // The gate must be used - direct dispatch without execute() is the bypass
-    // Verify that execute() is the only entry point by checking the plug's call log
-    let directDispatchRan = false;
-    // A bypass would call dispatch() directly, bypassing the gate
-    // This test verifies the gate was used (plug.callCount > 0 means gate.request was called)
+    let dispatched = false;
     const result = await gate.execute(descriptor, {
       dispatch: async () => {
-        directDispatchRan = true;
-        return { status: "ok" as const, text: "ok" };
+        dispatched = true;
+        return { status: "ok" as const, text: "must not run" };
       },
     });
+    expect(dispatched).toBe(false);
+    expect(result.status).toBe("blocked");
+    expect(result.text).toContain("blocked by scripted plug");
 
-    // The gate was consulted (plug recorded the call)
-    expect(plug.callCount).toBe(1);
-    expect(directDispatchRan).toBe(true);
-    expect(result.status).toBe("ok");
+    // (b) the shell tool cannot spawn when the gate blocks process.spawn
+    const blockingPlug = new ScriptedPlug([{ answer: { answer: "block", reason: "test: spawn blocked" } }]);
+    const blockingGate = new Gate(blockingPlug);
+    const ctx = toolCtx({ gate: blockingGate });
+    await expect(runCommand({ CommandLine: "echo hi" }, ctx)).rejects.toThrow("Cannot run command");
+    expect(ctx.children.registered).toHaveLength(0);
+    expect(blockingPlug.calls.length).toBe(1);
+  });
+
+  test("a ToolContext literal without gate does not compile", () => {
+    // @ts-expect-error gate is required in ToolContext; omitting it must fail type checking
+    const noGate: ToolContext = { workspace: "", appDir: "", limits: { toolResultMaxChars: 1 }, promptSystem: undefined, askUser: () => Promise.resolve({}), children: { register: () => {}, deregister: () => {} }, adapters: {}, sessions: { dir: "" }, state: { todo: [] }, signal: new AbortController().signal };
+    expect(noGate).toBeTruthy();
   });
 });
 

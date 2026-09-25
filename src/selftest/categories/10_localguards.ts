@@ -6,8 +6,10 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { EffectDescriptor } from "../../harness/descriptor.ts";
+import { Gate } from "../../harness/gate.ts";
 import { createPlug } from "../../harness/plugs/factory.ts";
 import { LocalGuardsPlug } from "../../harness/plugs/localguards.ts";
+import { PassThroughPlug } from "../../harness/plugs/passthrough.ts";
 import { computeMac } from "../../config/migrate.ts";
 import { renderToolResult } from "../../executor/injection.ts";
 import { MemoryStore } from "../../supervisor/memory.ts";
@@ -167,7 +169,7 @@ export async function localGuardsCategory(_ctx: SelftestContext): Promise<TestRe
       const validMac = computeMac(validLine, Buffer.from(secret));
       const tamperedLine: Record<string, unknown> = { id: "mem_2", text: "tampered memory", scope: "workspace", tags: [], created: "2026-09-13T00:00:00Z", last_used: "2026-09-13T00:00:00Z", uses: 0, source_session: "test", mac: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" };
       writeFileSync(memFile, `${JSON.stringify({ ...validLine, mac: validMac })}\n${JSON.stringify(tamperedLine)}\n`);
-      const store = MemoryStore.open(memDir, hash, { secretPath });
+      const store = MemoryStore.open(memDir, hash, { gate: new Gate(new PassThroughPlug()), secretPath });
       const hasIntegrityWarning = store.warnings.some((w) => w.includes("integrity check"));
       const hasValid = store.memories.has("mem_1");
       const hasTampered = store.memories.has("mem_2");

@@ -69,11 +69,13 @@ export function createExecutor(epoch: number | undefined, opts: ExecutorOptions 
       const promptHash = promptSystemContentHash(promptSystem);
       const tools = buildDefinitions({ os: process.platform === "win32" ? "windows" : process.platform, shell: process.platform === "win32" ? "pwsh" : "sh", skills: promptSystem.skills });
       const adapters = opts.adapters ?? {
-        generating: await getAdapter(config.roles.generating.provider, { keys: config.keys, env }),
-        compacting: await getAdapter(config.roles.compacting.provider, { keys: config.keys, env }),
-        websearch: await getAdapter(config.roles.websearch.provider, { keys: config.keys, env }),
+        generating: await getAdapter(config.roles.generating.provider, { keys: config.keys, env }), // harness-allow: U7 getAdapter()
+        compacting: await getAdapter(config.roles.compacting.provider, { keys: config.keys, env }), // harness-allow: U7 getAdapter()
+        websearch: await getAdapter(config.roles.websearch.provider, { keys: config.keys, env }), // harness-allow: U7 getAdapter()
       };
       children = new ChildRegistry(() => rt.heartbeat.beatNow());
+      const gatePlug = opts.gatePlug ?? createPlug({ profile: config.config.harness.profile, denylist: config.config.supervisor.denylist, workspace: payload.workspace, read_allowlist: config.config.harness.local.read_allowlist, protected_paths: config.config.harness.local.protected_paths, network_commands: config.config.harness.local.network_commands, approval: config.config.harness.local.approval, env });
+      gate = new Gate(gatePlug);
       const toolCtx: ToolContext = {
         workspace: payload.workspace,
         appDir: payload.app_dir,
@@ -85,6 +87,7 @@ export function createExecutor(epoch: number | undefined, opts: ExecutorOptions 
         sessions: { dir: join(config.dataDir, "sessions") },
         state: { todo: [] },
         signal: new AbortController().signal,
+        gate,
       };
       toolCtxRef = toolCtx;
       const snapshot = configSnapshot(config);
@@ -122,9 +125,6 @@ export function createExecutor(epoch: number | undefined, opts: ExecutorOptions 
       } else {
         systemPrompt = assembleSystemPrompt(promptSystem, workspaceInfo(payload.workspace, config.agentFolder, config));
       }
-      const gatePlug = opts.gatePlug ?? createPlug({ profile: config.config.harness.profile, denylist: config.config.supervisor.denylist, workspace: payload.workspace, read_allowlist: config.config.harness.local.read_allowlist, protected_paths: config.config.harness.local.protected_paths, network_commands: config.config.harness.local.network_commands, approval: config.config.harness.local.approval, env });
-      gate = new Gate(gatePlug);
-      toolCtx.gate = gate;
       const admitResult = admit(gatePlug, dhash, plugHash, 1);
       const admitPayload: PayloadOf<"admit_result"> = admitResult.admitted
         ? { status: "admitted", run_ctx: runCtxToWire(admitResult.run_ctx), exposure: admitResult.exposure }
@@ -178,14 +178,14 @@ export function createExecutor(epoch: number | undefined, opts: ExecutorOptions 
           return;
         case "halt": {
           const haltReason = msg.payload.reason ?? "halted";
-          gate?.halt(haltReason);
-          const inFlight = gate?.collectInFlight() ?? [];
+          gate!.halt(haltReason);
+          const inFlight = gate!.collectInFlight() ?? [];
           void agent.onCancel("cancel");
           rt.send("halted", { reason: haltReason, in_flight: inFlight });
           return;
         }
         case "resolve":
-          gate?.resolve(msg.payload.effect_id, msg.payload.decision);
+          gate!.resolve(msg.payload.effect_id, msg.payload.decision);
           void rt.sendEvent({ ts: nowTs(), proc: "exec", type: "effect_resolved", effect_id: msg.payload.effect_id, decision: msg.payload.decision ?? "deny" }, false);
           return;
         default:

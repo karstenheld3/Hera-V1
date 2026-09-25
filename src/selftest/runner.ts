@@ -309,7 +309,7 @@ export async function selftestMain(args: ParsedArgs, io: SelftestIo = { out: (l)
       const key = role.provider;
       let adapter = adapters.get(key);
       if (adapter === undefined) {
-        adapter = await getAdapter(role.provider, { keys: config.keys, env });
+        adapter = await getAdapter(role.provider, { keys: config.keys, env }); // harness-allow: U12 getAdapter()
         adapters.set(key, adapter);
       }
       return adapter;

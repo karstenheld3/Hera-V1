@@ -3,6 +3,8 @@
 import type { ToolCall } from "../../src/models.ts";
 import type { ProviderAdapter } from "../../src/providers/base.ts";
 import type { AskUserAnswer, AskUserRequest, ToolContext } from "../../src/tools/registry.ts";
+import type { Gate } from "../../src/harness/gate.ts";
+import { allowAllGate } from "../helpers/gate.ts";
 import { REPO_ROOT } from "./procs.ts";
 
 export interface FakeChildren {
@@ -33,6 +35,7 @@ export interface ToolCtxOptions {
   signal?: AbortSignal;
   sessionsDir?: string;
   timeouts?: ToolContext["timeouts"];
+  gate?: Gate;
 }
 
 export function toolCtx(opts: ToolCtxOptions = {}): ToolContext & { children: FakeChildren & ToolContext["children"] } {
@@ -50,6 +53,7 @@ export function toolCtx(opts: ToolCtxOptions = {}): ToolContext & { children: Fa
     state: { todo: [] },
     signal: opts.signal ?? controller.signal,
     timeouts: opts.timeouts,
+    gate: opts.gate ?? allowAllGate(),
   };
 }
 

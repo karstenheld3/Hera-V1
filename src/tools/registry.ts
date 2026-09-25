@@ -45,7 +45,7 @@ export interface ToolContext {
   state: { todo: TodoItem[] };
   signal: AbortSignal;
   /** the gate socket for non-tool effects (net.egress, process.spawn, model.invoke) */
-  gate?: Gate;
+  gate: Gate;
   /** test hooks */
   timeouts?: { searchMs?: number; fetchMs?: number };
   os?: { platform?: string };

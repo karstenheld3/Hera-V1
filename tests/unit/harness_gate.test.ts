@@ -5,7 +5,7 @@ import { PassThroughPlug } from "../../src/harness/plugs/passthrough.ts";
 import { ScriptedPlug } from "../../src/harness/plugs/scripted.ts";
 
 describe("HERAV1HRNS-TP01-TC-01: bypass detection", () => {
-  test("a direct dispatch without the gate is not possible through execute()", async () => {
+  test("execute() consults the plug and dispatches when the answer is allow", async () => {
     const plug = new ScriptedPlug([{ answer: "allow" }]);
     const gate = new Gate(plug);
     const descriptor = new EffectDescriptor({

@@ -4,7 +4,13 @@
  * SDK client construction, adapter factory calls, eval(), and dynamic import()
  * do not occur outside src/harness/ and src/providers/.
  *
- * Known bypass sites owned by other units are allow-listed with a comment.
+ * A line outside the allowed folders is permitted only when it carries an inline
+ * marker naming the pattern it legitimately matches: `// harness-allow: <unit> <pattern-name>`.
+ * Two violation kinds:
+ * 1. Unmarked: a line matches a pattern and carries no marker naming that pattern.
+ * 2. Stale marker: a line carries a marker whose pattern name is unknown or does
+ *    not match the line it sits on.
+ *
  * Reads files only. Never spawns, fetches, or imports product modules.
  */
 
@@ -34,41 +40,14 @@ const PATTERNS: Pattern[] = [
   { name: "eval()", regex: /\beval\s*\(/ },
 ];
 
-interface AllowEntry {
-  file: string;
-  line: number;
-  pattern: string;
-  unit: string;
-}
-
-const ALLOW_LIST: AllowEntry[] = [
-  // U12: process/bootstrap.ts - spawnChild definition (calls the spawn wrapper, not Bun.spawn directly)
-  { file: "process/bootstrap.ts", line: 30, pattern: "spawnChild()", unit: "U12" },
-  // U12: selftest - selftest runner and categories
-  { file: "selftest/categories/07_process_health.ts", line: 60, pattern: "spawnChild()", unit: "U12" },
-  { file: "selftest/categories/02_configuration.ts", line: 48, pattern: "getAdapter()", unit: "U12" },
-  { file: "selftest/runner.ts", line: 312, pattern: "getAdapter()", unit: "U12" },
-  // U7: tools/web.ts - fetch() wrapped through gate as net.egress
-  { file: "tools/web.ts", line: 100, pattern: "fetch()", unit: "U7" },
-  { file: "tools/web.ts", line: 109, pattern: "fetch()", unit: "U7" },
-  // U7: executor/main.ts - adapter construction for the Executor process
-  { file: "executor/main.ts", line: 72, pattern: "getAdapter()", unit: "U7" },
-  { file: "executor/main.ts", line: 73, pattern: "getAdapter()", unit: "U7" },
-  { file: "executor/main.ts", line: 74, pattern: "getAdapter()", unit: "U7" },
-  // U7: supervisor/core.ts - adapter construction for the Supervisor process
-  { file: "supervisor/core.ts", line: 257, pattern: "getAdapter()", unit: "U7" },
-  // U7: supervisor/memory.ts - fallback streamTurn when gate is undefined
-  { file: "supervisor/memory.ts", line: 352, pattern: "streamTurn()", unit: "U7" },
-  // U7: cli/builtins.ts - communicator ask adapter
-  { file: "cli/builtins.ts", line: 82, pattern: "getAdapter()", unit: "U7" },
-  { file: "cli/builtins.ts", line: 92, pattern: "streamTurn()", unit: "U7" },
-]
+const MARKER_REGEX = /\/\/\s*harness-allow:\s*(\S+)\s+(.+?)\s*$/;
 
 interface Hit {
   file: string;
   line: number;
   text: string;
   pattern: string;
+  kind: "unmarked" | "stale-marker";
 }
 
 function listTsFiles(dir: string): string[] {
@@ -86,15 +65,10 @@ function listTsFiles(dir: string): string[] {
   return results;
 }
 
-function isAllowed(file: string, line: number, pattern: string): boolean {
-  return ALLOW_LIST.some(
-    (a) => a.file === file && a.line === line && a.pattern === pattern,
-  );
-}
-
-function scanFile(filePath: string): Hit[] {
+function scanFile(filePath: string, inAllowedFolder: boolean): Hit[] {
   const content = readFileSync(filePath, "utf-8");
   const lines = content.split("\n");
+  const relFile = relative(SRC_ROOT, filePath).replace(/\\/g, "/");
   const hits: Hit[] = [];
 
   for (let i = 0; i < lines.length; i++) {
@@ -103,15 +77,23 @@ function scanFile(filePath: string): Hit[] {
     if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) {
       continue;
     }
-    for (const pat of PATTERNS) {
-      if (pat.regex.test(line)) {
-        hits.push({
-          file: relative(SRC_ROOT, filePath).replace(/\\/g, "/"),
-          line: i + 1,
-          text: trimmed.length > 120 ? trimmed.substring(0, 117) + "..." : trimmed,
-          pattern: pat.name,
-        });
+
+    // Stale-marker pass: every marker must name a known pattern that matches its own line.
+    const markerMatch = MARKER_REGEX.exec(line);
+    if (markerMatch !== null) {
+      const patternName = markerMatch[2];
+      const pattern = PATTERNS.find((p) => p.name === patternName);
+      if (pattern === undefined || !pattern.regex.test(line)) {
+        hits.push({ file: relFile, line: i + 1, text: trimmed.length > 120 ? trimmed.substring(0, 117) + "..." : trimmed, pattern: patternName, kind: "stale-marker" });
       }
+    }
+
+    // Unmarked pass: only outside the allowed folders.
+    if (inAllowedFolder) continue;
+    for (const pat of PATTERNS) {
+      if (!pat.regex.test(line)) continue;
+      if (markerMatch !== null && markerMatch[2] === pat.name) continue;
+      hits.push({ file: relFile, line: i + 1, text: trimmed.length > 120 ? trimmed.substring(0, 117) + "..." : trimmed, pattern: pat.name, kind: "unmarked" });
     }
   }
 
@@ -124,23 +106,17 @@ function main(): void {
 
   for (const file of files) {
     const relPath = relative(SRC_ROOT, file).replace(/\\/g, "/");
-    const parts = relPath.split("/");
-    const firstPart = parts[0] ?? "";
-
+    const firstPart = relPath.split("/")[0] ?? "";
     const inAllowedFolder = ALLOWED_FOLDERS.includes(firstPart);
-
-    const hits = scanFile(file);
-    for (const hit of hits) {
-      if (inAllowedFolder) continue;
-      if (isAllowed(hit.file, hit.line, hit.pattern)) continue;
-      violations.push(hit);
-    }
+    violations.push(...scanFile(file, inAllowedFolder));
   }
 
   if (violations.length > 0) {
-    console.error(`lint:harness: ${violations.length} violation(s) found outside src/harness/ and src/providers/:`);
+    const unmarked = violations.filter((v) => v.kind === "unmarked").length;
+    const stale = violations.filter((v) => v.kind === "stale-marker").length;
+    console.error(`lint:harness: ${violations.length} violation(s) found (${unmarked} unmarked, ${stale} stale marker):`);
     for (const v of violations) {
-      console.error(`  ${v.file}:${v.line} [${v.pattern}]  ${v.text}`);
+      console.error(`  ${v.file}:${v.line} [${v.pattern}] (${v.kind})  ${v.text}`);
     }
     process.exit(1);
   }
