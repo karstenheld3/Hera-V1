@@ -1,0 +1,7 @@
+{"type": "response.created", "response": {"id": "resp_1", "status": "in_progress"}}
+{"type": "response.reasoning_summary_text.delta", "delta": "Need two files."}
+{"type": "response.output_text.delta", "delta": "Reading "}
+{"type": "response.output_text.delta", "delta": "both files."}
+{"type": "response.output_item.done", "item": {"type": "function_call", "call_id": "call_a1", "name": "read_file", "arguments": "{\"file_path\": \"a.md\"}"}}
+{"type": "response.output_item.done", "item": {"type": "function_call", "call_id": "call_b2", "name": "read_file", "arguments": "{\"file_path\": \"b.md\"}"}}
+{"type": "response.completed", "response": {"id": "resp_1", "status": "completed", "output": [{"id": "rs_1", "type": "reasoning", "summary": [{"type": "summary_text", "text": "Need two files."}], "encrypted_content": "ENC_PAYLOAD_1", "status": "completed"}, {"id": "msg_1", "type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "Reading both files."}]}, {"id": "fc_1", "type": "function_call", "call_id": "call_a1", "name": "read_file", "arguments": "{\"file_path\": \"a.md\"}"}, {"id": "fc_2", "type": "function_call", "call_id": "call_b2", "name": "read_file", "arguments": "{\"file_path\": \"b.md\"}"}], "usage": {"input_tokens": 1200, "output_tokens": 80, "input_tokens_details": {"cached_tokens": 1024}, "output_tokens_details": {"reasoning_tokens": 40}}}}

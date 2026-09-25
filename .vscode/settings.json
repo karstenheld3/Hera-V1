@@ -1,0 +1,21 @@
+{
+  "files.watcherExclude": {
+    "**/dist/**": true,
+    "**/tests/.tmp/**": true,
+    "**/.agent-data/**": true,
+    "**/.agent-tools/**": true,
+    "**/.agent/**": true,
+    "**/node_modules/**": true,
+    "**/src/bundled/**": true,
+    "**/_sessions/**": true,
+    "**/_Archive/**": true
+  },
+  "search.exclude": {
+    "**/dist/**": true,
+    "**/tests/.tmp/**": true,
+    "**/.agent-data/**": true,
+    "**/src/bundled/**": true,
+    "**/_sessions/**": true,
+    "**/_Archive/**": true
+  }
+}

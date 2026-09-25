@@ -1,0 +1,3 @@
+{"text": "Working.", "usage": {"input_tokens": 200000, "output_tokens": 10}, "tool_calls": [{"name": "list_dir", "args": {"DirectoryPath": "{WS}"}}]}
+{"role": "compacting", "error": "compacting model down"}
+{"text": "Finished without compaction.", "usage": {"input_tokens": 300, "output_tokens": 5}}

@@ -1,0 +1,25 @@
+{
+  "name": "hera",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "bun build --compile --bytecode --minify --target=bun-windows-x64 --no-compile-autoload-dotenv --no-compile-autoload-bunfig --asset src/bundled/agent --asset-naming=[name].[ext] --windows-title Hera --outfile dist/hera-1.1.1-bun-windows-x64.exe src/index.ts",
+    "build:sync": "pwsh -File build.ps1 -SyncOnly",
+    "test": "bun test tests/unit tests/integration",
+    "test:live": "bun test tests/live",
+    "test:all": "bun test",
+    "lint": "tsc --noEmit",
+    "lint:harness": "bun run scripts/lint_harness.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "@clack/prompts": "^0.11.0",
+    "js-yaml": "^4.1.0",
+    "openai": "^7.10.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}

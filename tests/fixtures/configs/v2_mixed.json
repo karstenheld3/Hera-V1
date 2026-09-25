@@ -1,0 +1,1 @@
+{ "roles": { "generating": { "model_id": "glm-5.2", "effort": "high" } }, "execution_policy": "manual" }

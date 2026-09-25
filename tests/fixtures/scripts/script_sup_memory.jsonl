@@ -1,0 +1,4 @@
+{"role": "memory", "text": "[{\"text\": \"The user prefers terse answers\", \"scope\": \"global\", \"tags\": [\"style\"]}]", "usage": {"input_tokens": 40, "output_tokens": 12}}
+{"role": "memory", "text": "[\"mem_00001\"]", "usage": {"input_tokens": 30, "output_tokens": 4}}
+{"role": "supervisor", "text": "Read a file before editing it (rules/coding-style.md: 'read first').", "usage": {"input_tokens": 80, "output_tokens": 20}}
+{"role": "supervisor", "text": "no action", "usage": {"input_tokens": 60, "output_tokens": 2}}

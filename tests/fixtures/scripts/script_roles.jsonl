@@ -1,0 +1,6 @@
+{"thinking": "plan", "text": "Reading README.", "tool_calls": [{"name": "read_file", "args": {"file_path": "README.md"}}], "usage": {"input_tokens": 100, "output_tokens": 20}}
+{"role": "supervisor", "text": "ALLOW", "usage": {"input_tokens": 10, "output_tokens": 2}}
+{"text": "Done.", "notice": "scripted notice", "usage": {"input_tokens": 120, "output_tokens": 5, "cache_read_tokens": 90}}
+{"role": "compacting", "text": "Summary of the conversation.", "stop_reason": "end"}
+{"role": "generating", "web_results": [{"title": "Example", "url": "https://example.com/", "snippet": "An example page."}]}
+{"role": "generating", "error": "simulated outage"}

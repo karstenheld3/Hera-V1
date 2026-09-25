@@ -1,0 +1,2 @@
+{"text": "Running a command.", "tool_calls": [{"name": "run_command", "args": {"CommandLine": "echo hello", "Blocking": true}}], "usage": {"input_tokens": 1000, "output_tokens": 30, "cache_read_tokens": 900}}
+{"text": "The command was executed.", "usage": {"input_tokens": 1200, "output_tokens": 20}}

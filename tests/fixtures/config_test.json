@@ -1,0 +1,31 @@
+{
+  "roles": {
+    "generating": { "model_id": "gpt-4.1-mini", "effort": "low" },
+    "compacting": { "model_id": "gpt-4.1-mini", "effort": "low" },
+    "supervisor": { "model_id": "gpt-4.1-mini", "effort": "low" },
+    "memory": { "model_id": "gpt-4.1-mini", "effort": "low" },
+    "communicator": { "model_id": "gpt-4.1-mini", "effort": "low" }
+  },
+  "agent_folder": "agent",
+  "data_dir": "data",
+  "rule_block_max_chars": 6000,
+  "max_tool_calls_per_prompt": 40,
+  "auto_continue": false,
+  "tool_result_max_chars": 50000,
+  "compaction_threshold_fraction": 0.6,
+  "compaction_threshold_max_tokens": 500,
+  "workspace_tree_max_depth": 4,
+  "workspace_tree_max_lines": 200,
+  "supervisor": {
+    "stall_timeout_s": 5,
+    "review_every_calls": 10,
+    "cost_alert_usd": 1.0
+  },
+  "ipc": {
+    "heartbeat_s": 1,
+    "ack_timeout_ms": 1000,
+    "hello_timeout_ms": 1000,
+    "shutdown_timeout_ms": 500,
+    "restart_budget": 1
+  }
+}

@@ -1,0 +1,2 @@
+{"text": "Asking.", "tool_calls": [{"name": "ask_user_question", "args": {"question": "Which one?", "options": [{"label": "Alpha", "description": "a"}, {"label": "Beta", "description": "b"}], "allowMultiple": false}}]}
+{"text": "You chose well."}

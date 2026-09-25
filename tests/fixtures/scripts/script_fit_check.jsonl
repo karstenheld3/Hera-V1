@@ -1,0 +1,9 @@
+{"text": "Reading large file.", "tool_calls": [{"name": "read_file", "args": {"file_path": "{WS}/big.txt"}}], "usage": {"input_tokens": 1000, "output_tokens": 10}}
+{"text": "Reading again.", "tool_calls": [{"name": "read_file", "args": {"file_path": "{WS}/big.txt"}}], "usage": {"input_tokens": 15000, "output_tokens": 10}}
+{"text": "Reading again.", "tool_calls": [{"name": "read_file", "args": {"file_path": "{WS}/big.txt"}}], "usage": {"input_tokens": 30000, "output_tokens": 10}}
+{"text": "Reading again.", "tool_calls": [{"name": "read_file", "args": {"file_path": "{WS}/big.txt"}}], "usage": {"input_tokens": 45000, "output_tokens": 10}}
+{"text": "Reading again.", "tool_calls": [{"name": "read_file", "args": {"file_path": "{WS}/big.txt"}}], "usage": {"input_tokens": 60000, "output_tokens": 10}}
+{"text": "Reading again.", "tool_calls": [{"name": "read_file", "args": {"file_path": "{WS}/big.txt"}}], "usage": {"input_tokens": 75000, "output_tokens": 10}}
+{"text": "Reading again.", "tool_calls": [{"name": "read_file", "args": {"file_path": "{WS}/big.txt"}}], "usage": {"input_tokens": 90000, "output_tokens": 10}}
+{"text": "Reading again.", "tool_calls": [{"name": "read_file", "args": {"file_path": "{WS}/big.txt"}}], "usage": {"input_tokens": 105000, "output_tokens": 10}}
+{"text": "Done reading.", "usage": {"input_tokens": 120000, "output_tokens": 5}}

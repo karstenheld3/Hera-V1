@@ -1,0 +1,21 @@
+{
+  "scripted_tool_turn": {
+    "comm": ["app startup", "app roles", "app session", "ipc spawn", "ipc hello", "ipc ack", "ipc turn_summary", "ipc shutdown", "app exit_code"],
+    "exec": ["llm request", "llm first_token", "llm response", "tool start", "tool gate", "tool end"],
+    "sup": ["sup reseed_done"]
+  },
+  "never": ["text_delta", "thinking_delta", "heartbeat", "relay"],
+  "field_sets": {
+    "ipc spawn": ["role", "pid", "dur_ms"],
+    "ipc hello": ["role", "ready_ms"],
+    "ipc ack": ["ref", "event", "dur_ms"],
+    "ipc turn_summary": ["sent", "received", "relayed", "ack_p99_ms", "aborted"],
+    "llm request": ["role", "provider", "model", "msgs", "tools"],
+    "llm response": ["role", "dur_ms", "in_tok", "cache_read", "out_tok", "cost_usd", "tool_calls"],
+    "tool start": ["tool", "args"],
+    "tool gate": ["tool", "result", "end_prompt"],
+    "tool end": ["tool", "dur_ms", "status", "chars"],
+    "app session": ["file", "resumed"],
+    "app exit_code": ["code", "source"]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "description": "U0 baseline scenario: two prompts, four tool calls (read_file, write_to_file, run_command blocked by denylist, search), no ask_user, no compaction, no web tools, no provider network access",
+  "workspace_files": {
+    "README.md": "# Baseline Workspace\n\nA test workspace for the harness equivalence proof.\n",
+    "src/greet.ts": "export const greeting = \"hello\";\n"
+  },
+  "prompts": [
+    "Read the README file and write a greeting file",
+    "Clean up and search the workspace"
+  ],
+  "script": [
+    {"role": "generating", "thinking": "I need to read the README first.", "text": "Let me read the README file.", "tool_calls": [{"name": "read_file", "args": {"file_path": "{WS}/README.md"}}], "usage": {"input_tokens": 1000, "output_tokens": 30, "cache_read_tokens": 900}},
+    {"role": "generating", "text": "Now I will write a greeting file.", "tool_calls": [{"name": "write_to_file", "args": {"TargetFile": "{WS}/greeting.txt", "CodeContent": "Hello from the baseline.\n", "EmptyFile": false}}], "usage": {"input_tokens": 1100, "output_tokens": 25, "cache_read_tokens": 950}},
+    {"role": "generating", "text": "The README says it is a test workspace and the greeting file has been written.", "usage": {"input_tokens": 1200, "output_tokens": 20}},
+    {"role": "generating", "text": "Let me clean up the build folder.", "tool_calls": [{"name": "run_command", "args": {"CommandLine": "rm -rf build", "Blocking": true}}], "usage": {"input_tokens": 1300, "output_tokens": 15}},
+    {"role": "generating", "text": "The command was blocked. Let me search the workspace instead.", "tool_calls": [{"name": "search", "args": {"Query": "export", "SearchPath": "{WS}"}}], "usage": {"input_tokens": 1400, "output_tokens": 20}},
+    {"role": "generating", "text": "Search complete. Found one match in src/greet.ts.", "usage": {"input_tokens": 1500, "output_tokens": 15}},
+    {"role": "memory", "text": "[]", "usage": {"input_tokens": 30, "output_tokens": 4}},
+    {"role": "memory", "text": "[]", "usage": {"input_tokens": 30, "output_tokens": 4}},
+    {"role": "supervisor", "text": "no action", "usage": {"input_tokens": 60, "output_tokens": 2}}
+  ],
+  "config_overrides": {
+    "supervisor": {
+      "review_every_calls": 50,
+      "cost_alert_usd": 100
+    },
+    "ipc": {
+      "heartbeat_s": 1
+    }
+  }
+}

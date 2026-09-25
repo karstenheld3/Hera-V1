@@ -1,0 +1,2 @@
+{"text": "Running a long command.", "tool_calls": [{"name": "run_command", "args": {"CommandLine": "Start-Sleep -Seconds 30; Write-Output done", "Blocking": true, "SafeToAutoRun": true}}]}
+{"text": "After the command."}

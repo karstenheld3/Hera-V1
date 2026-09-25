@@ -1,0 +1,561 @@
+---
+description: Verify work against specs and rules
+auto_execution_mode: 3
+---
+
+# Verify Workflow
+
+Verify work against specs, rules, and quality standards.
+
+**Goal**: Validated work with all issues identified and fixed
+
+**Why**: Prevents shipping bugs, spec violations, rule breaks, and factual errors
+
+## Required Skills
+
+Invoke based on context:
+- @skills:write-documents for document verification
+- @skills:coding-conventions for code verification
+
+**CRITICAL**: Skill invocation returns instructions only. You MUST also read the supporting files listed in skill output (e.g., `PYTHON-RULES.md`, `WORKFLOW-RULES.md`) to get actual verification rules.
+
+## MUST-NOT-FORGET
+
+1. Apply fixes immediately without asking for permission - this workflow has authority to correct issues
+2. Re-read session/project documents before verifying (see Mandatory Re-read)
+3. Create internal MNF checklist and verify against it in Final Steps
+4. Do not verify from memory. Search for applicable rule files, re-read them (mandatory: `core-conventions.md`), and build checklist from source before checking items. Never accept "matches existing style" as passing.
+
+## Mandatory Re-read
+
+**SESSION-MODE** - Re-read session folder documents:
+- NOTES.md
+- PROBLEMS.md
+- PROGRESS.md
+- FAILS.md
+- LEARNINGS.md (if exists)
+- If verifying within a `T##_*` topic folder: also read its tracking files
+
+**PROJECT-MODE** - Re-read workspace-level documents:
+- README.md
+- !NOTES.md or NOTES.md
+- PROBLEMS.md (if exists)
+- !PROGRESS.md or PROGRESS.md (if exists)
+- FAILS.md
+- LEARNINGS.md (if exists)
+
+## Workflow
+
+1. First find out what the context is (Cross-Document, INFO, SPEC, IMPL, Code, TEST, Session, Workflow, Skill, Template, Prompts, Conversation, Translation Output)
+2. Read GLOBAL-RULES and Verification Labels
+3. Read the relevant Context-Specific section
+4. Create a verification task list
+5. Work through verification task list
+6. Run Final Steps
+
+## GLOBAL-RULES
+
+Apply to ALL document types and contexts:
+
+- Avoid excessive acronyms. Write out acronyms on first usage.
+  - BAD: `SPN not supported.`
+  - GOOD: `Service Principal Name (SPN) not supported.`
+- Use verification labels consistently (see below)
+- Re-read relevant rules and session files before verifying
+- Make internal "MUST-NOT-FORGET" list and check after each step
+- If product names are used, make sure they are spelled correctly. Do web research when needed.
+  - BAD: Sharepoint -> GOOD: SharePoint
+  - BAD: AI Foundry Remote SharePoint -> GOOD: "SharePoint tool" for Azure AI Foundry Agent Service
+- **Avoid Markdown tables** - Convert to lists:
+  - Tables found? → Convert to unnumbered lists with bold labels
+  - Exception: README.md may use tables without `<PromptSystem>` tag
+  - Only [ACTOR] may add `<PromptSystem MarkdownTablesAllowed=true />` exception to other files
+  - If tables ARE allowed: verify formatting per `core-conventions.md` (aligned columns with spaces)
+- **Avoid emojis** - Remove or replace with text:
+  - Emojis found? → Replace with text equivalents (Yes/No/Warning)
+  - Exception: README.md may use emojis without `<PromptSystem>` tag
+  - Only [ACTOR] may add `<PromptSystem EmojisAllowed=true />` exception to other files
+- **Preserve human-readable formatting** in INFO, SPEC, IMPL documents:
+  - Bold for emphasis on key terms, framework names, or important concepts is acceptable
+  - The "no bold" rule applies only to LLM-consumed skill resource files (see Skills section)
+  - Do not strip formatting that aids human scanning and comprehension
+- **Labels decodable at point of use (AP-PR-11)** - Scan for bracket labels with 1-2 characters:
+  - Exempt: `[x]`/`[ ]` checkboxes, `[N]` retry counts
+  - Exempt: Established system labels: `[ASSUMED]`, `[VERIFIED]`, `[TESTED]`, `[PROVEN]`
+  - Short label found? Check: Is a legend visible at every usage point (no scrolling)? If yes: pass. If no: replace with full word or add legend.
+  - For labels 3+ characters: apply Reconstruction Test - can the full term be recovered from the short form? If not, flag as opaque abbreviation
+- **Privacy Leak Scan** (Post-generation enforcement of Pre-Write Privacy Gate from `agent-behavior.md`):
+  - For every file in verification scope, classify by context:
+    - **General-purpose document** (reusable knowledge, guides, rules, HOW-TOs, topic-independent INFO): scan ALL content for private data
+    - **ILLUSTRATIVE content** in ANY file (BAD/GOOD blocks, code snippets, sample data, templates, demonstrations): scan examples for private data
+  - Grep for known private data patterns: real IBANs, postal codes, phone numbers, tax IDs, addresses with house numbers, names of real people, session-specific references (certificate dates, contract numbers, case IDs)
+  - Cross-check against session data files (e.g., project data files, `NOTES.md`) if available - values from those files must not appear in general-purpose documents or ILLUSTRATIVE sections
+  - Any match = `[CRITICAL]` finding → fix immediately by replacing with generic placeholder
+  - Stranger test: Would someone reading this file learn the user's identity, location, family, or finances? If yes → fix
+- **Minimal fact-check** - Spot-check concrete claims without running full `/fact-check` pipeline:
+  - Scan for: version numbers, URLs, existence claims ("X supports Y"), quantitative assertions (limits, thresholds, counts), product/feature names
+  - Trust hierarchy: observed behavior > source code > official docs > community sources > LLM output
+  - Verify up to 5 highest-risk claims via web search, file reading, or code inspection
+  - Hallucination triage signals (prioritize these): generic phrasing without specifics, stale version numbers, wrong terminology, assumptions stated as facts
+  - Fix incorrect claims immediately. If uncertain, add `[ASSUMED]` label
+  - For thorough fact-checking, run `/fact-check` separately
+
+## Conceptual verification
+
+When reviewing architecture, design and solution strategy, apply @skills:write-documents `SOCAS_RULES.md` with the Agent Output Review subset. Look for:
+- inconsistencies (SOCAS-01)
+- ambiguities (SOCAS-02)
+- new solutions for already solved problems (SOCAS-03)
+- overlapping concerns (SOCAS-03)
+- underspecified behavior (SOCAS-06)
+- unverified assumptions (SOCAS-10)
+- flawed thinking and underestimated complexity (SOCAS-10)
+- over-engineering and introduction of unwanted complexity (SOCAS-11)
+
+## Verification Labels
+
+Apply these labels to findings, requirements, and decisions in all document types:
+
+- `[ASSUMED]` - Unverified assumption, needs validation
+- `[VERIFIED]` - Finding verified by re-reading source or comparing with other sources
+- `[TESTED]` - Tested in POC (Proof-Of-Concept) or minimal test script
+- `[PROVEN]` - Proven to work in actual project via implementation or tests
+
+**Usage by document type:**
+- INFO: Label key findings and source claims
+- SPEC: Label design decisions and assumptions
+- IMPL: Label edge case handling and implementation choices
+- TEST: Label expected behaviors and test assertions
+
+**Progression:** `[ASSUMED]` → `[VERIFIED]` → `[TESTED]` → `[PROVEN]`
+
+## Final Steps
+
+1. Re-read previous conversation, provided and relevant files
+2. Identify de-prioritized or violated instructions
+3. Add tasks to verification task list
+4. Work through verification task list
+5. Verify again against MUST-NOT-FORGET list
+
+# CONTEXT-SPECIFIC
+
+## Cross-Document Verification
+
+Detect by: user provides both a File (derivative) and a Source (authority) in the invocation, e.g. `/verify README.md against core-conventions.md`.
+
+**Goal**: Fix semantic drift between derivative File and authoritative Source. Source is truth, File must align.
+
+### Phase 1: Extract
+
+1. Read Source completely. Extract every key concept as a numbered list: one line per concept with topic + core claim
+2. Read File completely. Extract the same way
+3. Map concepts bidirectionally:
+   - Source concept has matching File concept → paired
+   - Source concept has no File match → gap
+   - File concept has no Source match → addition
+
+### Phase 2: Compare
+
+For each paired concept, extract atomic claims from both sides and compare:
+1. Meaning matches → skip (no action needed)
+2. Meaning diverged → note what Source says vs. what File says
+3. Source is more current/complete → File needs update
+4. File contains detail Source lacks → determine if valid extension or drift
+
+For gaps (Source concepts missing from File):
+- Determine if File should cover this concept given its scope
+- If yes → needs addition
+
+For additions (File concepts absent from Source):
+- Determine if intentional extension or unsourced claim
+- Unsourced claims that imply Source authority → needs removal or rewrite
+
+### Phase 3: Fix Plan
+
+Build a single consolidated fix plan. One numbered list, each item is an actionable edit:
+
+```
+Fix plan for [File] against [Source]:
+1. [section] - Update [topic] to match Source: [what to change]
+2. [section] - Add missing coverage of [topic] from Source
+3. [section] - Remove unsourced claim about [topic]
+4. [section] - Rewrite [topic] to reflect Source wording
+...
+```
+
+Do NOT modify Source. If Source appears outdated, note at end of plan: `Source issues (for user): [description]`
+
+### Phase 4: Execute
+
+1. Apply each fix plan item sequentially
+2. After all fixes applied, re-read both documents at changed locations to confirm alignment
+3. Apply GLOBAL-RULES to the File
+
+## Deep Research Output (Multi-File Research Set)
+
+Detect by: folder contains `_INFO_[TOPIC]-01_Summary.md` + `_INFO_[TOPIC]-02_Sources.md` + topic files + `__STRUT_[TOPIC].md`.
+
+**Read**: @skills:research-methods `RESEARCH_RULES.md` - contains all RS-*, SC-*, SM-*, TF-*, ST-*, QA-* rules with verification procedure.
+
+Execute the 6-step verification procedure from `RESEARCH_RULES.md`:
+1. **Structure Check** (RS-01 through RS-06) - file set completeness
+2. **Sources Check** (SC-01 through SC-09) - source collection quality
+3. **Summary Check** (SM-01 through SM-11) - summary file quality
+4. **Topic Files Check** (TF-01 through TF-10) - per-file quality
+5. **STRUT Check** (ST-01 through ST-07) - process execution
+6. **Quality Check** (QA-01 through QA-11) - cross-cutting quality
+
+After SM-* checks pass, verify summary content depth:
+7. **Summary Depth Check** (SD-CD-01 through SD-CD-07, SD-ES-* conditionals): Read @skills:research-methods `RESEARCH_SUMMARY_RULES.md`. Execute the Verification Procedure from that file.
+
+Additionally:
+- Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity, structure, naming)
+- Verify against @skills:write-documents `MECT_WRITING_RULES.md` (voice, word choice, terminology, headings, lists)
+
+## Information Gathering (INFO)
+
+**Priority 1: Factuality and clarity** (misinterpretation prevention)
+- Think first: How would another person approach this? Is scope aligned with problem?
+- Verify sources. Read them again and verify or complete findings.
+- Drop all sources that can't be found.
+- Ask questions that a reader might ask and clarify them.
+- Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity, structure, naming)
+- Verify against @skills:write-documents `MECT_WRITING_RULES.md` (voice, word choice, terminology, headings, lists)
+- Apply conceptual verification (SOCAS) to analysis and conclusions sections
+
+**Priority 2: Document structure** (template compliance)
+- Read @skills:write-documents `INFO_RULES.md` and verify against all INFO-* rules
+- If research document: verify optional sections positioned per @skills:write-documents `INFO_GUIDES.md`
+- Read `[AGENT_FOLDER]/workflows/research.md` again and verify against instructions
+
+## Specifications (SPEC)
+
+- Verify Timeline field is present and accurate (Created date, update count, date range)
+- Verify MUST-NOT-FORGET section exists and rules are followed
+- Verify against spec requirements and existing code.
+- Look for bugs, inconsistencies, contradictions, ambiguities, underspecified behavior.
+- Think of corner cases we haven't covered yet.
+- Ensure detailed changes/additions plan exists.
+- Ensure exhaustive implementation verification checklist at end.
+- Verify Document History section exists and is up to date
+- Verify UI mockups use Unicode box-drawing characters (SPEC-DG-06: `┌ ├ └ │ ─` not `+ - |`)
+- Verify no implementation details in SPEC (SPEC-CT-02): no code snippets, no source file line numbers, no function signatures, no `[VERIFIED: file lines]` tags. Implementation details belong in IMPL.
+- Read @skills:write-documents skill again and verify against rules.
+- Verify against @skills:write-documents `SPEC_RULES.md` (required for all SPEC documents)
+- Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity, structure, naming)
+- Verify against @skills:write-documents `MECT_WRITING_RULES.md` (voice, word choice, terminology, headings, lists)
+
+## Implementation Plans (IMPL)
+
+- Verify Timeline field is present and accurate (Created date, update count, date range)
+- Verify MUST-NOT-FORGET section exists and rules are followed
+- Read spec again and verify against spec.
+- Anything forgotten or not implemented as in SPEC?
+- Verify Document History section exists and is up to date
+- Read @skills:coding-conventions skill again and verify against rules.
+- Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity, structure, naming)
+- Verify against @skills:write-documents `MECT_WRITING_RULES.md` (voice, word choice, terminology, headings, lists)
+
+## Implementations (Code)
+
+- Read specs and plans again and verify against specs.
+- Are there existing tests that we can run to verify?
+- Can we do quick one-off tests to verify we did not break things?
+- Read @skills:coding-conventions skill again and verify against rules.
+- Verify against @skills:coding-conventions `MECT_CODING_RULES.md` (precision, brevity, consistency, naming design, documentation)
+
+**Logging Verification (automatic, language-agnostic):**
+
+If code contains logging, output, or print statements:
+
+1. Read @skills:coding-conventions `LOGGING-RULES.md` (general rules)
+2. Identify logging type and read corresponding rules file:
+   - User-facing (console, SSE) → `LOGGING-RULES-USER-FACING.md`
+     - Goal: Users always know what is happening
+   - App-level (server logs, debug) → `LOGGING-RULES-APP-LEVEL.md`
+     - Goal: Human-readable AND machine-parseable
+   - Script-level (test/QA output) → `LOGGING-RULES-SCRIPT-LEVEL.md`
+     - Goal: All failure info in logs alone
+3. Verify against core principles:
+   - APAPALAN (as precise as possible, as little as necessary)
+   - Least Surprise (predictable patterns across solutions)
+   - Full Disclosure (each line understandable without context, provides enough to assess complexity + processing time)
+   - Visible Structure (logs reveal workflow, not just progress)
+   - Announce > Track > Report (three-phase pattern)
+4. Verify code against all applicable LOG-* rules
+
+## Testing (TEST)
+
+- Verify Timeline field is present and accurate (Created date, update count, date range)
+- Verify MUST-NOT-FORGET section exists and rules are followed
+- Verify test strategy matches spec requirements
+- Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity, structure, naming)
+- Verify against @skills:write-documents `MECT_WRITING_RULES.md` (voice, word choice, terminology, headings, lists)
+- Check test priority matrix:
+  - MUST TEST: Critical business logic covered?
+  - SHOULD TEST: Important workflows included?
+  - DROP: Justified reasons for skipping?
+- Verify test cases:
+  - All edge cases from IMPL plan have corresponding TC-XX
+  - Format: Description -> ok=true/false, expected result
+  - Grouped by category
+- Check test data:
+  - Required fixtures defined?
+  - Setup/teardown procedures clear?
+- Verify test phases:
+  - Ordered execution sequence logical?
+  - Dependencies between phases documented?
+- Cross-check against spec:
+  - Every FR-XX has at least one TC-XX
+  - Every EC-XX has corresponding test
+- Verify Document History section exists and is up to date
+
+## Workflows, Skills, Skill Resource Files
+
+Read the rule file for your context and verify against all rules. Also verify against @skills:write-documents `APAPALAN_RULES.md` and `MECT_WRITING_RULES.md`.
+
+- Workflows → @skills:write-documents `WORKFLOW_RULES.md` (all WF-*), also @skills:coding-conventions `WORKFLOW-RULES.md` (design principles)
+- Skills → @skills:write-documents `SKILL_RULES.md` (all SK-*)
+  - If SETUP.md exists: verify UNINSTALL.md also exists (not in SK-* rules)
+- Skill Resource Files (`*_RULES.md`, `*_GUIDES.md`, `*_CHECKS.md` in skill folders) → @skills:write-documents `WORKFLOW_RULES.md` (applicable WF-*)
+  - Verify SK-CT-05: no visual-only formatting (no bold, no filler phrases)
+  - Verify SK-CT-06: no Document History section
+  - For _RULES: Rule Index present, BAD/GOOD pairs for non-trivial rules
+  - For _GUIDE: numbered decision steps, no verification checklists (belongs in _RULES)
+  - For _CHECKS: action + evidence + failure indicator per check item
+  - No redundancy with referenced files (`core-conventions.md`, templates, other rule files)
+
+## Templates
+
+Detect by: filename pattern `*_TEMPLATE.md` in skill or workflow folder, or `__TEMPLATE_*` working template in session/topic folder.
+
+**Read**: @skills:write-documents `TEMPLATE_RULES.md` (all TMPL-*), `TEMPLATE_GUIDES.md`
+
+### Branching by Template Type
+
+**Permanent template** (`*_TEMPLATE.md` in skill/workflow folder):
+- Reusable across sessions and projects
+- Must follow all TMPL-* rules
+- Companion `*_RULES.md` or `*_GUIDES.md` if template has complex verification rules (TMPL-ST-06)
+- Verify SK-CT-05: no visual-only formatting (bold only in template content fields like `**Doc ID**:`)
+- Verify SK-CT-06: no Document History section in the template FILE (template may CONTAIN a Document History section for instances)
+
+**Working template** (`__TEMPLATE_*` in session/topic folder):
+- Scaffolding for one research or task set, retained for extension
+- Must follow structural TMPL-* rules (ST, AN, PH)
+- Header rules (HD) adapt to domain context
+- No companion files needed
+
+### Verification
+
+- Run audit checklist from `TEMPLATE_RULES.md` (all TMPL-* rules)
+- Dynamic components: conditional markers have insertion criteria, agent instructions present at non-obvious sections
+- No redundancy with companion `*_RULES.md` or `*_GUIDES.md` files
+- Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity, naming)
+- Verify against @skills:write-documents `MECT_WRITING_RULES.md` (voice, word choice, terminology)
+
+## Prompts Files
+
+Detect by: filename pattern `_PROMPTS_*.md` or file starts with a fenced code block (opening fence as first non-empty line) and contains `---` separators between fenced blocks.
+
+**Read**: @skills:write-documents `PROMPTS_RULES.md` (all PRMT-* rules), `PROMPTS_GUIDES.md`, `APAPALAN_RULES.md`
+
+- Verify against all PRMT-* rules in `PROMPTS_RULES.md` — all categories: FT, ST, SQ, CT, SC, EX, NM
+- Verify against `APAPALAN_RULES.md` (precision, brevity)
+- For PRMT-CT-08/CT-10 (workflow call formatting): check every backtick-wrapped workflow name inside a fence for execution verbs (run, use, execute, call, invoke, perform, apply, do). If found → violation. If no execution verb → correct reference.
+- For PRMT-CT-11 (existing workflows): scan `[AGENT_FOLDER]/workflows/` frontmatters to verify prompts reference or invoke matching workflows instead of reinventing logic
+
+## Minto Documents
+
+Detect by: filename pattern `__MINTO-DRAFT_*.md` (draft) or `_MINTO_*.md` (article).
+
+**Read**: @skills:write-documents `MINTO_RULES.md`, `MINTO-DRAFT_TEMPLATE.md`, `MINTO_TEMPLATE.md`
+
+**Verification checklist for Minto Draft (`__MINTO-DRAFT_*`):**
+- Structure matches `MINTO-DRAFT_TEMPLATE.md` (MINTO-DS-06):
+  - Header block: Generated, Source material, Purpose, Listener, Action
+  - Findings Inventory section with Fnn entries (source + label)
+  - Selection Criteria section with weights
+  - Per candidate: Score, Magnet, One-Argument Test, Question ordering, AMINTON tree, Same Kind check
+- Verify against MINTO-DS-* rules (3 candidates, recommended marked, criteria, inventory)
+- Verify against MINTO-AQ-* rules (magnet, ordering, one-argument test, declarative answers, same kind)
+- Verify against MINTO-ME-* rules (Mutually Exclusive, Collectively Exhaustive (MECE) at all levels)
+
+**Verification checklist for Minto Article (`_MINTO_*`):**
+- Structure matches `MINTO_TEMPLATE.md` (MINTO-AS-08):
+  - Header block: Doc ID, Source, Argument
+  - Executive Summary with SCQA (Situation, Complication, Answer)
+  - One section per Q with idea-stating heading (not category label)
+  - Bold claim per answer, evidence woven into paragraphs
+  - Conclusion: one summary line per Q + restated A
+  - Appendix: full AMINTON (Argument, Main claim, Insight, Node, Tree, Opposition, Nuance) tree (A through E-nodes with source Fnn refs)
+- Verify against MINTO-TI-* rules (sub-questions, evidence, no orphans, source references)
+- Verify against MINTO-AS-* rules (Doc ID, SCQA Executive Summary, section per Q, appendix, top-down order)
+- Verify against MINTO-CL-* rules (closing present, one line per answer, no new claims)
+- Verify against MINTO-ME-* rules (MECE at all levels)
+- Every prose paragraph maps to an AMINTON node (no unmapped content)
+
+## Translation Output
+
+Detect by: file has `_[LANG]` suffix (e.g., `report_DE.md`, `video_DE.srt`) and a corresponding source file exists, or context indicates this is `/translate` output.
+
+- Read @skills:write-documents `TRANSLATION_RULES.md` and verify against all TR-* rules
+- Run Step 5 Phase 1 checks from `/translate` workflow (grep term pairs, native chars, addressing form, structure counts, CJK if applicable)
+- Compare source and target: paragraph count, heading count, code block count
+- Verify no source language fragments in translated prose (outside code/URLs)
+
+## Session Tracking (NOTES, PROBLEMS, PROGRESS)
+
+**Verify NOTES.md:**
+- Session Info complete (Started date, Goal)?
+- Key Decisions documented?
+- Important Findings recorded?
+- Workflows to Run on Resume listed?
+- Agent instructions still valid?
+
+**Verify PROBLEMS.md:**
+- All discovered issues documented?
+- Status marked (Open/Resolved/Deferred)?
+- Root cause identified for resolved items?
+- Deferred items have justification?
+- **Sync check**: Which problems should move to project-level PROBLEMS.md?
+
+**Verify PROGRESS.md:**
+- To Do list current?
+- Done items marked with [x]?
+- Tried But Not Used documented (avoid re-exploring)?
+- Test coverage analysis up to date?
+- **Sync check**: Which findings should move to project-level docs?
+
+**Session Close Sync Checklist:**
+- [ ] Resolved problems with project impact → sync to project PROBLEMS.md
+- [ ] Reusable patterns/decisions → sync to project NOTES.md
+- [ ] Discovered bugs in unrelated code → create issues or sync to PROBLEMS.md
+- [ ] New agent instructions → sync to project rules or NOTES.md
+
+## Conversations
+
+- Read @skills:write-documents `CONVERSATION_RULES.md` and verify against all CV-* rules
+
+**If verifying a conversation DRAFT (email/message written AS user):**
+
+Read all three rule layers and verify in priority order:
+
+1. Read @skills:write-documents `APAPALAN_RULES.md` - verify AP-CM-01, AP-CM-02, AP-CM-03:
+   - [ ] Every commitment has action + deliverable + weekday + ISO date + time (AP-CM-01)
+   - [ ] Every question in own paragraph, "Question:" label, self-contained (AP-CM-02)
+   - [ ] Every request in own paragraph, "Request:" label, explicit timing (AP-CM-02)
+   - [ ] All dates: weekday + ISO date. Periods include year. Timezone when scheduling. (AP-CM-03)
+2. Read @skills:write-documents `CONVERSATION_HUMANIZING_RULES.md` - verify against Anti-Pattern Index:
+   - [ ] Full grammar preserved (no dropped pronouns/articles) - CV-HM-07
+   - [ ] Greeting/closing from user's History, not invented or rotated - CV-HM-06
+   - [ ] Sentence rhythm varies, no 3+ uniform lengths - CV-HM-05
+   - [ ] No LLM vocabulary, no formal connectives in casual context
+   - [ ] No translationese - reads as native speaker wrote it - CV-HM-07
+   - [ ] No over-humanizing (precision intact) - CV-HM-01
+3. Read @skills:write-documents `CONVERSATION_RULES.md` - verify format:
+   - [ ] Email header format correct if email - CV-EM-01
+   - [ ] Draft marked if unsent - CV-EM-04
+   - [ ] Native characters used - CV-TR-03
+
+## STRUT Plans (Planning Phase)
+
+Verify when STRUT plan is created or updated:
+
+- [ ] Every Objective links to at least one Deliverable (`← P1-Dx`)
+- [ ] Unlinked Objectives flagged - require [ACTOR] confirmation at transition
+- [ ] All Deliverables have clear completion criteria
+- [ ] Transitions reference Deliverables (not Objectives)
+- [ ] Steps use valid AGEN verbs with `[VERB](params)` format
+- [ ] Problem/goal addressed by Objectives?
+- [ ] Strategy includes approach summary (AWT estimate optional)
+
+## STRUT Plans (Transition Phase)
+
+Verify before phase transition (when evaluating Transitions):
+
+- [ ] All Deliverables in Transition condition are checked?
+- [ ] For each Objective: are ALL linked Deliverables checked?
+- [ ] Deliverable evidence supports Objective claim?
+- [ ] Unlinked Objectives: [ACTOR] confirmation obtained?
+- [ ] Transition target is valid (`[PHASE-NAME]`, `[CONSULT]`, or `[END]`)?
+
+**Objective Verification Rule:**
+- Objective is verified when ALL linked Deliverables are checked
+- Check Objective checkbox only after confirming linked Deliverables
+- If Objective has no links (`←`), require explicit [ACTOR] confirmation
+
+## Investigation Logs
+
+Detect by: filename pattern `_LOG_*.md` in session folder, or context indicates `/investigate` output.
+
+**Read**: @skills:write-documents `INVESTIGATION_LOG_RULES.md` (all IL-* rules)
+
+- Verify against all IL-* rules in `INVESTIGATION_LOG_RULES.md`
+- Verify log structure: header (Goal, Started, Sources), Premises, Index, entries
+- Verify entry IDs follow `I[NNN].[NNN]-type(topic)` format (IL-EF-01)
+- Verify bold usage: status/outcome values only (IL-CT-01)
+- Verify Index completeness: every entry has corresponding Index line (IL-IX-01)
+- Verify Index is rebuildable via grep on entry headings (IL-IX-03)
+- Verify first entry is a state entry with STARTING status (IL-ST-05)
+- Verify all hypotheses have resolved status or are documented as open (IL-HL-02)
+- Verify append-only: no past entries modified (IL-EF-04)
+- Verify path lookup table in first STATE entry (IL-CT-03)
+- Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity)
+- Verify against @skills:write-documents `MECT_WRITING_RULES.md` (voice, word choice, terminology)
+
+## Workspace Setup
+
+Detect by: user runs `/verify workspace` or `/verify setup` or context is workspace configuration.
+
+Read @skills:workspace-management SKILL.md, WORKSPACE-RULES.md, and WORKSPACE-GUIDES.md before verifying. Also read WORKSPACE_SETUP_QUESTIONNAIRE.md schema section for schema-aware verification. Read templates (DEV_REPO_NOTES_TEMPLATE.md, PRODUCT_REPO_README_TEMPLATE.md, COMPANY_REPO_NOTES_TEMPLATE.md) for comparison against workspace files.
+
+Schema-aware mode (FR-68): When invoked as `/verify workspace` or `/verify setup`, also load schema fields from WORKSPACE_SETUP_QUESTIONNAIRE.md. Evaluate each field for status (OK/GAP/STALE/DEVIATION/N/A) per Procedure 6. This produces identical results to `/workspace-setup verify`. Schema-aware mode proposes fixes but does NOT execute them — consistent with workspace-setup.md Use Case 1. User must confirm with @rules:core-conventions.md [CONFIRMATION_KEYWORDS] before applying.
+
+Verification checklist (sourced from WORKSPACE-RULES.md + schema fields):
+
+1. Detect sync relationship (SYNCED or SELF-CONTAINED) by checking for sync markers:
+   - promptsystem-sync.json at [WORKSPACE_FOLDER] root
+   - [SYNCED_REPOS] in source NOTES.md
+   - [KNOWLEDGE_SOURCE_FOLDER], [SPECS_SOURCE_FOLDER], [PRODUCT_VERSION] constants defined
+2. Read workspace constants from DevRepo NOTES.md
+3. If SYNCED: check all required constants (base + sync source):
+   - Always required (all types): [WORKSPACE_FOLDER], [DEV_KNOWLEDGE_FOLDER], [DEV_SPECS_FOLDER], [AGENT_FOLDER], [SESSIONS_FOLDER], [SESSION_ARCHIVE_FOLDER], [SKILL_TOOLS_FOLDER], [API_KEYS_FILE]
+   - Required for SOFTWARE-DEV only: [PRODUCT_REPO_FOLDER], [PRODUCT_SOURCE_FOLDER], [PRODUCT_DOCS_FOLDER], [PRODUCT_VERSION], [SOPS_FILE]
+   - Repo-specific (check if present): [PROMPTSYSTEM_FOLDER]
+   - Sync source: [COMPANY_REPO_FOLDER], [KNOWLEDGE_SOURCE_FOLDER], [SPECS_SOURCE_FOLDER]
+   - Check promptsystem-sync.json exists at [WORKSPACE_FOLDER] root
+   - Check source paths in promptsystem-sync.json resolve to valid paths
+4. If SELF-CONTAINED: check base constants only, skip sync source constant checks
+5. Check required files:
+   - DevRepo: NOTES.md, PROBLEMS.md, PROGRESS.md, ID-REGISTRY.md, SOPS.md, FAILS.md
+   - ProductRepo: README.md (SOFTWARE-DEV only)
+   - CompanyRepo (if exists): NOTES.md
+6. Check agent folder structure: specs/, workflows/, skills/ subfolders exist
+7. Check workspace structure matches declared mode (SINGLE-PROJECT, MONOREPO, WORKSPACE). If GENERAL: Dimension 1 = N/A, skip structure check
+8. Check no deprecated files in agent folder
+9. Check ID-REGISTRY.md Project Topics have inline datestamps (WS-FL-04)
+10. Check NOTES.md Release Configuration section present for SOFTWARE-DEV workspaces (WS-CT-08)
+11. If GENERAL: verify dev-only constants and sections are absent (WS-CT-09). If SOFTWARE-DEV: verify dev-only constants and sections are present
+12. Report sync relationship state (SYNCED or SELF-CONTAINED)
+13. Schema-aware: evaluate each schema field from WORKSPACE_SETUP_QUESTIONNAIRE.md (OK/GAP/STALE/DEVIATION/N/A), propose fixes for GAP and STALE fields
+
+Fix actions per gap type:
+- Missing constant -> add with template default from DEV_REPO_NOTES_TEMPLATE.md
+- Missing required file -> create from template
+- Broken reference -> report only (requires user judgment)
+- Structural violation -> report only
+- Schema GAP/STALE -> propose fix, do NOT execute without @rules:core-conventions.md [CONFIRMATION_KEYWORDS]
+
+Downstream repo modifications are allowed (customizations are valid). Do not fail verification for intentional customizations.
+
+Report all fixes with what was changed and why.
+
+## No Context Match
+
+If document type does not match any context above:
+
+1. Apply GLOBAL-RULES (formatting, privacy, fact-check)
+2. Read @skills:write-documents `APAPALAN_RULES.md` and `MECT_WRITING_RULES.md`
+3. Verify document structure consistency (headings, lists, references)
+4. Run Final Steps

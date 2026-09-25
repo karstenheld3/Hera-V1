@@ -1,0 +1,12 @@
+{"ts":"2026-01-15 10:00:00.000","type":"session_started","system_prompt":"You are Hera, an agent.","tool_definitions":[{"name":"read_file","description":"Read a file","parameters":{"type":"object","properties":{}}}],"config_snapshot":{"roles":{"generator":{"model_id":"gpt-4.1-mini","effort":"low"}}},"prompt_system_fingerprint":{"hash":"abc"}}
+{"ts":"2026-01-15 10:00:01.000","type":"user_message","content":"List the files"}
+{"ts":"2026-01-15 10:00:01.100","type":"turn_started","role":"generator"}
+{"ts":"2026-01-15 10:00:02.000","type":"thinking_delta","text":"Plan: list files."}
+{"ts":"2026-01-15 10:00:02.500","type":"text_delta","text":"Listing files."}
+{"ts":"2026-01-15 10:00:03.000","type":"tool_call_requested","id":"tc_0001","tool":"list_dir","args":{"DirectoryPath":"C:/work/sample"}}
+{"ts":"2026-01-15 10:00:03.200","type":"tool_call_finished","id":"tc_0001","status":"ok","result":"README.md\nsrc/","result_chars":15}
+{"ts":"2026-01-15 10:00:04.000","type":"approval_required","action":"run_command","detail":"git status","approved":true}
+{"ts":"2026-01-15 10:00:05.000","type":"checkpoint_created","text":"Objective: list files. Summary: done.","truncated_messages":2,"kept_messages":4}
+{"ts":"2026-01-15 10:00:06.000","type":"turn_finished","role":"generator","input_tokens":1200,"output_tokens":80,"cache_read_tokens":1000,"cost_usd":0.0012}
+{"ts":"2026-01-15 10:00:07.000","type":"error","message":"WARNING: something minor"}
+{"ts":"2026-01-15 10:00:08.000","type":"prompt_step","index":1,"total":2,"digest":"0123456789ab"}

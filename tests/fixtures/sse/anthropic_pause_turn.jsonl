@@ -1,0 +1,3 @@
+{"type": "message_start", "message": {"id": "msg_03", "usage": {"input_tokens": 30, "output_tokens": 1}}}
+{"type": "message_delta", "delta": {"stop_reason": "pause_turn", "stop_sequence": null}, "usage": {"output_tokens": 2}}
+{"type": "message_stop"}

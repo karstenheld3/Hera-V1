@@ -1,0 +1,2 @@
+{"id": "c2", "choices": [{"index": 0, "delta": {"content": "Hello"}, "finish_reason": null}]}
+{"id": "c2", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}

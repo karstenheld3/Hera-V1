@@ -1,0 +1,4 @@
+{"text": "Working.", "tool_calls": [{"name": "todo_list", "args": {"todos": [{"id": "1", "content": "first task", "status": "in_progress", "priority": "high"}]}}], "usage": {"input_tokens": 100, "output_tokens": 10}}
+{"text": "Almost there.", "tool_calls": [{"name": "list_dir", "args": {"DirectoryPath": "{WS}"}}], "usage": {"input_tokens": 200000, "output_tokens": 10}}
+{"role": "compacting", "text": "# Objective:\nFinish the sample task.\n\n# Session Summary:\nThe agent listed files and tracked a todo.\n\n# Code Interaction Summary:\nNo edits yet.", "usage": {"input_tokens": 500, "output_tokens": 50}}
+{"text": "Finished after compaction.", "usage": {"input_tokens": 300, "output_tokens": 5}}

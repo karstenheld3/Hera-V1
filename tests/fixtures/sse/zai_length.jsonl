@@ -1,0 +1,2 @@
+{"id": "c3", "choices": [{"index": 0, "delta": {"content": "cut"}, "finish_reason": "length"}]}
+{"id": "c3", "choices": [], "usage": {"prompt_tokens": 5, "completion_tokens": 16384}}

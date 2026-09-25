@@ -1,0 +1,2 @@
+{"text": "Starting the loop.", "tool_calls": [{"name": "list_dir", "args": {"DirectoryPath": "{WS}"}}, {"name": "list_dir", "args": {"DirectoryPath": "{WS}"}}, {"name": "list_dir", "args": {"DirectoryPath": "{WS}"}}]}
+{"text": "Done after the limit."}

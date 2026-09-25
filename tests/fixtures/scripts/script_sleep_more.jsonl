@@ -1,0 +1,3 @@
+{"text": "Running a short command.", "tool_calls": [{"name": "run_command", "args": {"CommandLine": "Start-Sleep -Seconds 3; Write-Output done", "Blocking": true, "SafeToAutoRun": true}}]}
+{"text": "After the short command."}
+{"text": "Third turn answer."}

@@ -1,0 +1,2 @@
+{"text": "Cleaning up.", "tool_calls": [{"name": "run_command", "args": {"CommandLine": "rm -rf build", "Blocking": true}}]}
+{"text": "Understood, the command was blocked."}

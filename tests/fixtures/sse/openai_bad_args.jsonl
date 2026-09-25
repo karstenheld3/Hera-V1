@@ -1,0 +1,1 @@
+{"type": "response.completed", "response": {"id": "resp_2", "status": "completed", "output": [{"id": "fc_9", "type": "function_call", "call_id": "call_bad", "name": "edit", "arguments": "{\"file_path\": \"a.md\", \"old_string\": "}], "usage": {"input_tokens": 10, "output_tokens": 5}}}

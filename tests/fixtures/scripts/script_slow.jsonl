@@ -1,0 +1,1 @@
+{"thinking": "slow plan", "text": "slow text", "tool_calls": [{"name": "read_file", "args": {"file_path": "a"}}, {"name": "list_dir", "args": {}}], "delay_ms": 150}

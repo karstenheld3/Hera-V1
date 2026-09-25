@@ -1,0 +1,166 @@
+---
+description: Record a failure in FAILS.md, either from user input or by analyzing context
+auto_execution_mode: 3
+---
+
+# Fail Workflow
+
+Record failures to prevent repetition. Can be triggered explicitly or run analysis to detect issues.
+
+## Required Skills
+
+- @write-documents for FAILS_TEMPLATE.md structure
+
+## MUST-NOT-FORGET
+
+- Suggest `/learn` after problem is resolved
+- Session entries sync to workspace on `/session-finalize`
+
+## Trigger
+
+- [ACTOR] reports a failure: `/fail [description]`
+- Agent suspects something is wrong: `/fail` (no args)
+
+## Step 1: Check for Explicit Input
+
+If [ACTOR] provided a description:
+- Use that as the failure description
+- Skip to Step 3 (Classify Severity)
+
+If no description provided:
+- Proceed to Step 2 (Analyze Context)
+
+## Step 2: Analyze Context (Discovery Mode)
+
+Search for evidence of failures in order:
+
+### 2.1 Recent Conversation
+- Look for error messages shared by [ACTOR]
+- Look for phrases like "doesn't work", "fails", "broken", "wrong"
+- Look for corrections or rollbacks
+
+### 2.2 Test Status
+- Run test suite if available
+- Check for failing tests
+- Note which tests are red
+
+### 2.3 Code State
+- Check git status for uncommitted changes
+- Look for TODO/FIXME comments added recently
+- Check for syntax errors or lint issues
+
+### 2.4 Logs
+- Check application logs for errors
+- Check build logs for failures
+- Check console output from recent commands
+
+### 2.5 Documents
+- Check PROBLEMS.md for unresolved issues
+- Check session NOTES.md for blocked items
+- Check PROGRESS.md for stuck tasks
+
+### 2.6 Exit Condition
+
+If no significant issues found:
+- Report: "No failures detected in current context"
+- Exit workflow without creating entry
+
+## Step 3: Classify Severity
+
+Determine severity based on impact:
+
+- **[CRITICAL]** - Will definitely cause production failure
+- **[HIGH]** - Likely to cause failure under normal conditions
+- **[MEDIUM]** - Could cause failure under specific conditions
+- **[LOW]** - Minor issue, unlikely to cause failure
+
+## Step 4: Collect Evidence
+
+Gather supporting artifacts:
+
+- **When**: Current timestamp
+- **Where**: File/function/line or document section
+- **What**: Exact problem description
+- **Evidence**: Link, test output, or example proving the issue
+
+## Step 5: Re-read Failed Workflow/Rules
+
+**CRITICAL**: Before analyzing root cause, re-read what SHOULD have happened:
+
+1. If failure occurred during a workflow execution:
+   - Re-read the workflow file completely
+   - Note all MNF items, rules, and constraints
+   - Note any scripts or commands provided by the workflow
+   - **Follow references**: If workflow says "read NOTES.md" or other documents, read those too
+
+2. If failure involved rule violations:
+   - Re-read the relevant rule files
+   - Note specific requirements that were violated
+
+3. If failure involved configuration:
+   - Re-read NOTES.md, !NOTES.md for workspace config
+   - Re-read any referenced configuration sections
+
+4. Compare workflow/rules/config to actual execution:
+   - What did the workflow say to do?
+   - What config values applied?
+   - What did I actually do?
+   - Where is the gap?
+
+This step produces "Workflow re-read findings" for the FAILS entry.
+
+## Step 6: Analyze Root Cause
+
+Root cause analysis comparing instructions to execution:
+- What did the workflow/rules specify?
+- What did I actually execute?
+- Why was there a gap? (rushed, assumed, invented, ignored)
+- Keep concrete - cite line numbers when possible
+
+## Step 7: Suggest Fix
+
+Brief recommendation for resolution:
+- Immediate action to take
+- Keep actionable and specific
+
+## Step 8: Create FAILS Entry
+
+Add entry to FAILS.md:
+
+1. **Determine location (SESSION-FIRST rule)**:
+   
+   Check current work mode:
+   
+   **If SESSION-MODE** (working in `[SESSION_FOLDER]`):
+   - Write to `[SESSION_FOLDER]/FAILS.md`
+   - Create file if it doesn't exist
+   - Session entries sync to workspace on `/session-finalize`
+   
+   **If PROJECT-MODE** (no active session):
+   - Write to `[WORKSPACE_FOLDER]/FAILS.md` or `[PROJECT_FOLDER]/FAILS.md`
+   - For workspace-wide issues (PromptSystem, tooling, MCP servers)
+   - For issues affecting multiple projects
+
+2. Generate ID: `[TOPIC]-FL-[NNN]`
+
+3. Add entry at top of file using FAILS_TEMPLATE.md structure
+
+4. Include code example if applicable (before/after)
+
+## Step 9: Report
+
+Confirm to [ACTOR]:
+- Created `[TOPIC]-FL-NNN` in FAILS.md
+- Brief summary of what was recorded
+- Suggest `/learn` after problem is resolved for deeper analysis
+
+## Quality Gate
+
+Before completing:
+- [ ] Failed workflow/rules re-read (Step 5 completed)
+- [ ] "Workflow re-read findings" included in entry
+- [ ] Severity correctly classified
+- [ ] Evidence is concrete (not vague)
+- [ ] Location is specific (file:line when applicable)
+- [ ] Root cause compares instructions vs execution
+- [ ] Suggested fix is actionable

@@ -1,0 +1,6 @@
+# Hera API keys
+OPENAI_API_KEY="HERA_DECOY_openai0000000001"
+ANTHROPIC_API_KEY='HERA_DECOY_anthropic00000001'
+this line has no equals sign
+ZAI_API_KEY=
+# ZAI_API_KEY=HERA_DECOY_commented000001
